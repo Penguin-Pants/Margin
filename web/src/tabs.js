@@ -205,7 +205,7 @@ export function createTabs({ editor, autosave, api, getStorage, elements, onActi
     nodes.forEach((node, index) => {
       if (elements.strip.children[index] !== node) elements.strip.insertBefore(node, elements.strip.children[index] ?? null);
     });
-    if (focused?.isConnected && document.activeElement !== focused) focused.focus();
+    if (focused?.isConnected && document.activeElement !== focused) focused.focus({ preventScroll: true });
     const empty = tabs.length === 0;
     elements.empty.hidden = !empty;
     elements.editor.hidden = empty;
@@ -277,31 +277,44 @@ export function createTabs({ editor, autosave, api, getStorage, elements, onActi
     return current.commit;
   }
 
-  // Reorder by mouse drag (v4 TAB-1 to TAB-3). A press becomes a drag only
-  // after the pointer moves DRAG_DISTANCE px, so a click stays a click. A
-  // press on the close mark or in the name field starts no drag (EDGE-49,
-  // EDGE-50). The move listeners are on the window, so a drag that leaves the
-  // strip keeps the last place it reached (EDGE-51).
+  // Reorder by mouse drag (v4 TAB-1 to TAB-3, D78: the mouse only). A press
+  // becomes a drag only after the pointer moves DRAG_DISTANCE px, so a click
+  // stays a click, and a drag never ends in a click. A press on the close
+  // mark or in the name field starts no drag (EDGE-49, EDGE-50). The move
+  // listeners are on the window, and a pointer outside the strip moves
+  // nothing, so the tab keeps the last place it reached (EDGE-51).
   const DRAG_DISTANCE = 5;
   elements.strip.addEventListener('pointerdown', (event) => {
     const target = /** @type {HTMLElement} */ (event.target);
     const node = target.closest('.tab');
-    if (event.button !== 0 || !event.isPrimary || !node || target.closest('.tab-close, .tab-name-input')) return;
+    if (event.pointerType !== 'mouse' || event.button !== 0 || !event.isPrimary) return;
+    if (!node || target.closest('.tab-close, .tab-name-input')) return;
     const id = node.dataset.id;
-    const startX = event.clientX;
+    const start = { x: event.clientX, y: event.clientY };
     let dragging = false;
     const move = (/** @type {PointerEvent} */ moved) => {
-      if (!dragging && Math.abs(moved.clientX - startX) < DRAG_DISTANCE) return;
+      // A move with the button up ends a drag whose pointerup was lost.
+      if ((moved.buttons & 1) === 0) {
+        end();
+        return;
+      }
+      if (!dragging && Math.hypot(moved.clientX - start.x, moved.clientY - start.y) < DRAG_DISTANCE) return;
       dragging = true;
       tabNode(id)?.classList.add('dragging');
-      moveTab(id, moved.clientX);
+      const strip = elements.strip.getBoundingClientRect();
+      if (moved.clientY >= strip.top && moved.clientY <= strip.bottom) moveTab(id, moved.clientX);
     };
     const end = () => {
       window.removeEventListener('pointermove', move);
       window.removeEventListener('pointerup', end);
       window.removeEventListener('pointercancel', end);
       tabNode(id)?.classList.remove('dragging');
-      if (dragging && find(id)) persist();
+      if (!dragging) return;
+      if (find(id)) persist();
+      // The click that follows the release would activate a tab.
+      const swallow = (/** @type {MouseEvent} */ click) => click.stopPropagation();
+      window.addEventListener('click', swallow, { capture: true, once: true });
+      setTimeout(() => window.removeEventListener('click', swallow, { capture: true }), 0);
     };
     window.addEventListener('pointermove', move);
     window.addEventListener('pointerup', end);

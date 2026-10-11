@@ -230,6 +230,7 @@ Coding agents record deviations from the plan here.
 | 2026-10-11 | M24 | One pattern, `NEW_NAME` (`^New (\d+)$`), serves the numbering and the empty-close rule, so an empty "New 1" (typed by the owner) also closes with no prompt. | NEW-7 asks for one pattern. NEW-5 counts "New" and digits only, with any number of digits. | Owner (chat, 2026-10-11) |
 | 2026-10-11 | M22 to M24 | Changed v1 to v3 tests outside the section 10 rows: the `extensionOf` test moved from `web/test/languages.test.js` to `web/test/contract.test.js` with all its cases. `e2e/layout.spec.js` (narrow window) also lists Save and Save all. | The function moved to `shared/contract.js` (EXT-2). The narrow-window list gains entries and loses none. | Owner (chat, 2026-10-11) |
 | 2026-10-11 | M22 | REN-6 (an unchanged name sends nothing) first had e2e tests only. The owner asked for a unit test: the check is now `isUnchangedName` in `web/src/tabs.js`, unit-tested in `web/test/tabs.test.js` (it failed first on a stub). | The check is in the tab controller, which needs the DOM. The controller has e2e tests only, as since P3 (section 10, P3 row 5). | Owner (chat, 2026-10-11): add the unit test. Built. |
+| 2026-10-11 | M25 | A drag never activates a tab, and the click after a drop is stopped. | TAB-1 to TAB-3 do not say. Without the stop, a drop on the dragged tab activated it and a drop elsewhere did not (review row 2). | Pending (owner) |
 
 ## 10. Phase review log
 
@@ -675,6 +676,14 @@ Two-pass review of each V4 phase diff (`REQUIREMENTS_V4.md` section 9). Same met
 | M24 | 4 | The "double-click on a tab creates none" test read the list once, before a create in flight could show. | Confirmed | It counts create requests over a short window. |
 | M24 | 5 | `BUILD_PLAN.md` sections 2.6 and 2.8 still gave the "Untitled N" naming and close rules. | Confirmed | Updated to the "New NN" rules. Old task history stays. |
 | M24 | 6 | When the commit fails during EDGE-46, the create still runs, and the failed field stays open on the now inactive tab. | Risk | EDGE-46 says the edit commits first, not what a failure does. The rename message shows and the field keeps the typed text. Save and Save all stop on a failure because their message would hide it (M23 row 1); New has no success message. Kept by the owner on 2026-10-11. |
+| M25 | 1 | After the pointer left the strip, horizontal moves still moved the tab (EDGE-51). | Confirmed | Fixed: a pointer above or below the strip moves nothing. The EDGE-51 test moves left and right outside the strip. It failed first. |
+| M25 | 2 | A drag dropped on the dragged tab itself fired a click and activated it; dropped elsewhere it did not. | Confirmed | Fixed: the click after a drag is stopped, so a drag never activates a tab. TAB-3 test drops a dragged inactive tab on itself. It failed first with the guard removed. |
+| M25 | 3 | Touch and pen presses also reordered tabs (D78 says the mouse). | Confirmed | Fixed: only `pointerType` mouse starts a drag. E2E test with touch pointer events. It failed first. |
+| M25 | 4 | A lost `pointerup` left the drag running, so hovering moved the tab. | Confirmed | Fixed: a move with the left button up ends the drag. E2E test. It failed first. |
+| M25 | 5 | The focus given back to a moved tab scrolled the strip during a drag (auto-scroll is a non-goal). | Confirmed | Fixed: `focus({ preventScroll: true })`. |
+| M25 | 6 | The TAB-3 test passed with any threshold. | Confirmed | The test checks that 4.2 px starts no drag and 5 px does. It failed first. |
+| M25 | 7 | The TAB-1 test did not drop past the last tab or move a tab to the first place, and the EDGE-50 test did not check the text selection. | Confirmed | Both tests extended. |
+| M25 | 8 | The 5 px rule measured the horizontal move only; TAB-3 says "moves". | Confirmed | Fixed: the distance counts both axes (`Math.hypot`). |
 
 ### V4 validation environment
 
@@ -687,3 +696,4 @@ Two-pass review of each V4 phase diff (`REQUIREMENTS_V4.md` section 9). Same met
 - Final (M24 review fixes): `npm test` 440 of 440. Chromium e2e 219 of 219. The perf spec, run alone, passed all targets (1 MB Python open 222 ms, 200 characters 1222 ms, Ctrl+End 24 ms; Markdown notes 200 characters 1616 ms; dense Markdown 200 characters 1227 ms, counts 176 ms, outline 244 ms).
 - Owner checks: the `@smoke` specs in Firefox and WebKit, and the name field with a screen reader and in Firefox and Safari (section 16, M22 row 1).
 - Owner review (2026-10-11): 15 deviations approved in chat. REN-6 unit test added: `npm test` 441 of 441.
+- M25 (PR #17): `npm test` 441 of 441. Chromium e2e 226 of 226 with 7 tests in `e2e/tab-order.spec.js`. The 2 first drag tests failed first on an assertion; the review tests for rows 1 to 4 and 6 failed first.
