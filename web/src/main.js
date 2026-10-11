@@ -199,9 +199,20 @@ const markdownMode = createStoredChoice({
     renderMarkdownUi();
   },
 });
+// Word wrap (WRP-2): one choice for every tab, per browser. On by default.
+const wordWrap = createStoredChoice({
+  getStorage: () => localStorage,
+  key: 'pn.wordWrap',
+  values: ['on', 'off'],
+  onChange: (next) => {
+    editor.setWordWrap(next);
+    renderEditorBar();
+  },
+});
 const editor = createEditor($('editor'), {
   theme: theme.get(),
   markdownMode: markdownMode.get(),
+  wordWrap: wordWrap.get(),
   onUpdate: (update) => {
     if (update.docChanged) {
       const id = tabs.shownId();
@@ -238,6 +249,7 @@ tabs = createTabs({
     renderSaveStatus();
     renderLanguage();
     renderMarkdownUi();
+    renderEditorBar();
     exportWrap.hidden = !tabs.active();
     // Save and Save all show with a tab, like Export (v4 SVB-2).
     $('save').hidden = !tabs.active();
@@ -305,6 +317,19 @@ function renderMarkdownUi() {
 // The editor keeps its cursor across a toggle (MDV-6), so the focus goes back to it.
 modeButton.addEventListener('click', () => {
   markdownMode.toggle();
+  if (tabs.shownId()) editor.focus();
+});
+
+// The bar below the tab strip shows on every tab. It holds the formatting
+// toolbar (Markdown only) and the Word wrap toggle (WRP-1).
+const editorBar = $('editor-bar');
+const wrapButton = $('word-wrap');
+function renderEditorBar() {
+  editorBar.hidden = !tabs.active();
+  wrapButton.setAttribute('aria-pressed', String(wordWrap.get() === 'on'));
+}
+wrapButton.addEventListener('click', () => {
+  wordWrap.toggle();
   if (tabs.shownId()) editor.focus();
 });
 

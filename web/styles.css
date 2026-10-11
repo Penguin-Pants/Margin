@@ -536,8 +536,8 @@ button.danger {
   padding: 3px 10px;
 }
 
-/* Formatting toolbar (MDV-9) */
-.md-toolbar {
+/* Bar below the tab strip (WRP-1): formatting toolbar (MDV-9) and Word wrap */
+.editor-bar {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -547,14 +547,26 @@ button.danger {
   border-bottom: 1px solid var(--border);
 }
 
+.md-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+}
+
+.editor-bar[hidden],
 .md-toolbar[hidden] {
   display: none;
 }
 
-.md-toolbar button,
-.md-toolbar select {
+.editor-bar button,
+.editor-bar select {
   padding: 2px 8px;
   font-size: 12px;
+}
+
+#word-wrap {
+  margin-left: auto;
 }
 
 .md-toolbar .heading-menu {
@@ -570,7 +582,8 @@ button.danger {
   font-style: italic;
 }
 
-#mode-toggle[aria-pressed="true"] {
+#mode-toggle[aria-pressed="true"],
+#word-wrap[aria-pressed="true"] {
   border-color: var(--accent);
   color: var(--accent);
 }

@@ -33,14 +33,22 @@ test('a keyboard-only run moves between tabs, opens one and closes one (audit C4
   const strip = page.getByRole('tablist', { name: 'Open documents' });
   await expect(strip.getByRole('button')).toHaveCount(0);
   await expect(editor(page)).toBeFocused();
-  // The tab list is one Tab stop, on the selected tab.
-  await page.keyboard.press('Escape');
-  await page.keyboard.press('Shift+Tab');
+  // The tab list is one Tab stop, on the selected tab. The Word wrap button
+  // (WRP-1) sits between it and the editor.
+  const wrap = page.getByRole('button', { name: 'Word wrap' });
+  const backToStrip = async () => {
+    await page.keyboard.press('Escape');
+    await page.keyboard.press('Shift+Tab');
+    await expect(wrap).toBeFocused();
+    await page.keyboard.press('Shift+Tab');
+  };
+  await backToStrip();
   await expect(tab(page, 'a.txt')).toBeFocused();
   await page.keyboard.press('Tab');
+  await expect(wrap).toBeFocused();
+  await page.keyboard.press('Tab');
   await expect(editor(page)).toBeFocused();
-  await page.keyboard.press('Escape');
-  await page.keyboard.press('Shift+Tab');
+  await backToStrip();
   await expect(tab(page, 'a.txt')).toBeFocused();
 
   for (const [key, name] of [['ArrowRight', 'b.txt'], ['End', 'c.txt'], ['ArrowRight', 'a.txt'], ['ArrowLeft', 'c.txt'], ['Home', 'a.txt'], ['ArrowRight', 'b.txt']]) {
@@ -61,8 +69,7 @@ test('a keyboard-only run moves between tabs, opens one and closes one (audit C4
   await expect(editor(page)).toHaveText('bbb');
   await expect(editor(page)).toBeFocused();
 
-  await page.keyboard.press('Escape');
-  await page.keyboard.press('Shift+Tab');
+  await backToStrip();
   await expect(tab(page, 'b.txt')).toBeFocused();
   const closeDialog = page.getByRole('dialog', { name: 'Close document' });
   await page.keyboard.press('Delete');
