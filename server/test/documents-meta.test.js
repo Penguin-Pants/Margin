@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { afterEach, beforeEach, test } from 'node:test';
 import { LANGUAGE_IDS } from '../../shared/contract.js';
+import { renamedName } from '../src/documents/repo.js';
 import { createTestApp, login, ORIGIN } from './helpers.js';
 
 const MISSING_ID = '00000000-0000-4000-8000-000000000000';
@@ -166,4 +167,49 @@ test('malformed or empty JSON returns 400 bad_request', async () => {
     assert.equal(res.statusCode, 400, JSON.stringify(payload));
     assert.deepEqual(res.json(), { error: 'bad_request' });
   }
+});
+
+test('a rename trims, drops trailing dots and appends .md to a name with no extension (REN-5)', () => {
+  assert.equal(renamedName('todo'), 'todo.md');
+  assert.equal(renamedName('todo.'), 'todo.md');
+  assert.equal(renamedName('  todo . . '), 'todo.md');
+  assert.equal(renamedName('Meeting 10.15'), 'Meeting 10.15.md');
+  assert.equal(renamedName('New 01'), 'New 01.md');
+  assert.equal(renamedName('data.csv'), 'data.csv');
+  assert.equal(renamedName(' .env '), '.env');
+  assert.equal(renamedName('Notes.MD'), 'Notes.MD');
+});
+
+test('the name limit counts the appended .md, and a name of dots only is rejected (REN-7)', () => {
+  assert.equal(renamedName('x'.repeat(253)), null);
+  assert.equal(renamedName('x'.repeat(252)), `${'x'.repeat(252)}.md`);
+  assert.equal(renamedName(`${'x'.repeat(252)}.py`), `${'x'.repeat(252)}.py`);
+  for (const value of ['', '  ', '...', ' . ', 'a\u0000b', 42, null]) assert.equal(renamedName(value), null, JSON.stringify(value));
+});
+
+test('a rename that adds .md returns the stored name (REN-5)', async () => {
+  const res = await patch({ name: ' todo. ' });
+  assert.equal(res.statusCode, 200);
+  assert.equal(res.json().name, 'todo.md');
+  assert.equal((await get()).json().name, 'todo.md');
+});
+
+test('a rename that changes the extension sets the language to Auto in the same reply (REN-8, REN-9)', async () => {
+  await patch({ language: 'sql' });
+  const res = await patch({ name: 'b.md' });
+  assert.equal(res.statusCode, 200);
+  assert.equal(res.json().name, 'b.md');
+  assert.equal(res.json().language, null);
+  assert.equal((await get()).json().language, null);
+});
+
+test('a rename that keeps the extension, in any letter case, keeps the override (REN-8)', async () => {
+  await patch({ language: 'sql' });
+  assert.equal((await patch({ name: 'b.py' })).json().language, 'sql');
+  assert.equal((await patch({ name: 'b.PY' })).json().language, 'sql');
+});
+
+test('a language sent with a rename wins over the reset (REN-8)', async () => {
+  const res = await patch({ name: 'b.md', language: 'python' });
+  assert.deepEqual([res.json().name, res.json().language], ['b.md', 'python']);
 });

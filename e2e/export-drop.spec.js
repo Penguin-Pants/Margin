@@ -145,7 +145,10 @@ test('dropped files open as new documents in drop order, with free names, and re
     { name: 'README.MD', text: 'readme' },
     { name: 'page.html', bytes: [0xef, 0xbb, 0xbf, ...Buffer.from('<p>a</p>\r\n<p>b</p>')] },
   ]);
-  await expect(page.getByRole('tab')).toHaveText([/notes\.md/, /notes \(2\)\.md/, /README\.MD/, /page\.html/]);
+  // The tab text hides the extension, the accessible name keeps it (v4 REN-11).
+  await expect
+    .poll(() => page.getByRole('tab').evaluateAll((tabs) => tabs.map((tab) => tab.getAttribute('aria-label'))))
+    .toEqual(['notes.md', 'notes (2).md', 'README.MD', 'page.html']);
   await expect(page.getByRole('tab', { name: 'page.html' })).toHaveAttribute('aria-selected', 'true');
   await expect(page.locator('.cm-content')).toHaveAttribute('data-language', 'html');
   await expect(page.locator('#status-message')).toHaveText('Not opened: report.pdf (only .md, .txt and .html files).');

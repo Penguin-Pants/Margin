@@ -9,7 +9,7 @@ import { createDocList } from './doclist.js';
 import { openDropped, setupDrop } from './drop.js';
 import { createDropdown } from './dropdown.js';
 import { createEditor } from './editor.js';
-import { emit, on } from './events.js';
+import { emit } from './events.js';
 import { download, exportContent, exportFormats, fullTree, printPage } from './export.js';
 import { LANGUAGES } from './languages.js';
 import { loginErrorText } from './login-errors.js';
@@ -505,9 +505,6 @@ setupDrop({
 // CON-1 and EDGE-1: a 412 or 404 save opens a dialog with the choices.
 setupConflictHandling({ api, autosave, tabs });
 
-// A rename can change the language when no override is set.
-on('doc-renamed', ({ id, name }) => tabs.rename(id, name));
-
 setupSessionRecovery({
   onSignedIn: () => {
     loadSettings();
@@ -539,6 +536,13 @@ $('empty-new').addEventListener('click', () => tabs.newDocument());
 $('empty-list').addEventListener('click', () => doclist.show());
 $('find').addEventListener('click', () => tabs.shownId() && openFind(editor.view));
 
+// Save now (EDT-7, SAV-5). A name edit commits first (v4 REN-4).
+async function saveActive() {
+  await tabs.commitEdit();
+  const id = tabs.shownId();
+  if (id) autosave.flush(id);
+}
+
 // Shortcuts (EDT-7, EDT-9). Ctrl+N and Ctrl+W reach the page only in the
 // installed app window. Alt+N and Alt+W work everywhere.
 setupShortcuts({
@@ -547,10 +551,7 @@ setupShortcuts({
     const tab = tabs.active();
     if (tab) tabs.close(tab.id);
   },
-  save: () => {
-    const id = tabs.shownId();
-    if (id) autosave.flush(id);
-  },
+  save: () => saveActive(),
   find: () => tabs.shownId() && openFind(editor.view),
   replace: () => tabs.shownId() && openReplace(editor.view),
 });

@@ -2,19 +2,22 @@
 // EDGE-14). Each accepted file becomes a new server document named as the
 // file, and opens in a new tab. A drag of text inside the editor is not a
 // file drag, so the editor keeps its own behavior (DRP-5).
-import { CONTENT_LIMIT_BYTES } from '../../shared/contract.js';
+import { baseName, CONTENT_LIMIT_BYTES, extensionOf } from '../../shared/contract.js';
 
-const ACCEPTED = /\.(md|markdown|txt|html|htm)$/i;
+const ACCEPTED = new Set(['md', 'markdown', 'txt', 'html', 'htm']);
+const isAccepted = (name) => ACCEPTED.has(extensionOf(name).toLowerCase());
 
 /**
  * The name, or the first free "name (n).ext" when another document has it
- * (DRP-2). `taken` holds the names in lower case.
+ * (DRP-2). The extension follows v4 EXT-1. `taken` holds the names in lower
+ * case.
  * @param {string} name
  * @param {Set<string>} taken
  */
 export function uniqueName(name, taken) {
   if (!taken.has(name.toLowerCase())) return name;
-  const [, base, extension = ''] = /^(.+?)(\.[^./]+)?$/.exec(name);
+  const base = baseName(name);
+  const extension = base === name ? '' : `.${extensionOf(name)}`;
   for (let n = 2; ; n += 1) {
     const candidate = `${base} (${n})${extension}`;
     if (!taken.has(candidate.toLowerCase())) return candidate;
@@ -28,7 +31,7 @@ export function uniqueName(name, taken) {
  * @returns {{ text: string } | { error: string }}
  */
 export function droppedText({ name, bytes }) {
-  if (!ACCEPTED.test(name)) return { error: 'only .md, .txt and .html files' };
+  if (!isAccepted(name)) return { error: 'only .md, .txt and .html files' };
   if (bytes.length > CONTENT_LIMIT_BYTES) return { error: 'larger than 1 MB' };
   try {
     // The decoder drops a byte order mark, and fatal rejects invalid UTF-8.
@@ -43,7 +46,7 @@ export function droppedText({ name, bytes }) {
  * folder or a file that moved away cannot be read.
  */
 async function readFile(file) {
-  if (!ACCEPTED.test(file.name)) return droppedText({ name: file.name, bytes: new Uint8Array() });
+  if (!isAccepted(file.name)) return droppedText({ name: file.name, bytes: new Uint8Array() });
   if (file.size > CONTENT_LIMIT_BYTES) return { error: 'larger than 1 MB' };
   let bytes;
   try {

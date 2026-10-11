@@ -2,7 +2,8 @@
 // editor state, so unsaved changes are in it (EXP-7). Each format downloads
 // at once, except PDF, which opens the print dialog (EXP-5).
 import { ensureSyntaxTree } from '@codemirror/language';
-import { extensionOf, languageId } from './languages.js';
+import { baseName, extensionOf } from '../../shared/contract.js';
+import { languageId } from './languages.js';
 import { exportPage, markdownToHtml } from './markdown-html.js';
 import { renderedText } from './markdown-text.js';
 
@@ -27,12 +28,6 @@ export function exportFormats(name, language) {
   if (language === 'markdown') return MARKDOWN_FORMATS;
   const extension = extensionOf(name);
   return extension && extension.toLowerCase() !== 'txt' ? [{ id: 'source', label: `Original (.${extension})` }, TEXT] : [TEXT];
-}
-
-/** The name without its last extension, or the whole name when that leaves nothing. */
-function baseName(name) {
-  const extension = extensionOf(name);
-  return (extension ? name.slice(0, -extension.length - 1) : name) || name;
 }
 
 /**

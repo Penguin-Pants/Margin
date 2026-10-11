@@ -20,3 +20,28 @@ export const UNTITLED_NAME = /^Untitled (\d+)$/;
 
 /** The autosave delay until the owner sets one (SAV-2). */
 export const AUTOSAVE_DEFAULT_SECONDS = 5;
+
+/** A name's extension (v4 EXT-1). Group 1 is the extension without the dot. */
+const EXTENSION = /\.([\p{L}\p{Nd}]{1,10})$/u;
+
+/**
+ * The extension as written, without the dot, or ''. It is the text after the
+ * last dot when that is 1 to 10 letters or digits with at least one letter
+ * (v4 EXT-1): `data.csv`, `a.7z` and `.env` have one, `Meeting 10.15` and
+ * `todo.` do not.
+ * @param {string | null | undefined} name
+ */
+export function extensionOf(name) {
+  const extension = EXTENSION.exec(name ?? '')?.[1] ?? '';
+  return /\p{L}/u.test(extension) ? extension : '';
+}
+
+/**
+ * The name without its extension and dot, or the whole name when that leaves
+ * nothing (`.env`).
+ * @param {string} name
+ */
+export function baseName(name) {
+  const extension = extensionOf(name);
+  return (extension ? name.slice(0, -extension.length - 1) : name) || name;
+}

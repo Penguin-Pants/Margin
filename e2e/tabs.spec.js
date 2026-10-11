@@ -72,7 +72,7 @@ test('a keyboard-only run moves between tabs, opens one and closes one (audit C4
   await expect(tab(page, 'b.txt')).toBeFocused();
   await page.keyboard.press('Delete');
   await page.keyboard.press('Enter'); // Keep, the default choice.
-  await expect(page.getByRole('tab')).toHaveText([/^a\.txt/, /^c\.txt/]);
+  await expect.poll(() => page.getByRole('tab').evaluateAll((tabs) => tabs.map((tab) => tab.getAttribute('aria-label')))).toEqual(['a.txt', 'c.txt']);
 });
 
 test('three tabs keep separate content and undo history', async ({ page }) => {
