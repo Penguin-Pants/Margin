@@ -1,6 +1,6 @@
 # Margin v4 Tab Rename, Save Buttons and New Documents: Requirements
 
-**Status:** Decision-complete. Open questions: none. Built: M22 to M24 (PR #16). Owner checks are open (section 9).
+**Status:** Decision-complete. Open questions: none. Built: M22 to M25 (PR #16). M25 is an owner addendum (section 3.5). Owner checks are open (section 9).
 **Date:** 2026-10-11
 **Purpose:** Single source of truth for v4. Section 9 serves as the build plan (no `BUILD_PLAN_V4.md`). This file does not include an implementation.
 **Location:** `docs/planning/REQUIREMENTS_V4.md`
@@ -31,7 +31,7 @@
 
 ## 2. Decision log
 
-Numbering continues from v3 (D39 to D56). D57 to D71 and D73 to D77 are owner decisions from the discovery on 2026-10-11. D72 lists builder defaults that the owner saw in the requirements review and published without change.
+Numbering continues from v3 (D39 to D56). D57 to D71 and D73 to D77 are owner decisions from the discovery on 2026-10-11. D78 and D79 are owner decisions for the tab order addendum (section 3.5), also on 2026-10-11. D72 lists builder defaults that the owner saw in the requirements review and published without change.
 
 | # | Topic | Decision | Rejected |
 |---|-------|----------|----------|
@@ -56,6 +56,8 @@ Numbering continues from v3 (D39 to D56). D57 to D71 and D73 to D77 are owner de
 | D75 | Number padding | At least 2 digits: "New 01" to "New 99", then "New 100". | 3 digits from the start ("New 001") |
 | D76 | Old "Untitled N" documents | They keep their names. The empty-close rule covers "New NN" only. | Both name patterns in the empty-close rule, a rename by migration |
 | D77 | Stored name of a new document | "New 01" with no extension and a stored Markdown override, as today (NEW-1). | "New 01.md" with Auto |
+| D78 | Tab order (addendum, 2026-10-11) | The owner drags a tab left or right within the tab strip to reorder the tabs. Nothing more. | None |
+| D79 | Tab order by keyboard | Mouse drag only. No keyboard move. An accepted exception to NFR-5. | Ctrl+Shift+Left and Right on a focused tab |
 
 ---
 
@@ -122,6 +124,16 @@ Numbering continues from v3 (NEW-1, NEW-2).
 | NEW-6 | The stored name has no extension and the stored language is Markdown, as in NEW-1 (D77). | `e2e`: New gives "New 01" in the tab and the Documents list, with "Markdown" in the language list. |
 | NEW-7 | The empty-close rule (DOC-6) covers "New NN" names only. One name pattern in `shared/contract.js` replaces `UNTITLED_NAME` (`shared/contract.js:19`). Existing "Untitled N" documents keep their names (D76). | `e2e`: an empty "New 01" closes with no prompt and no document is left. An empty "Untitled 1" shows the Keep or Delete prompt. |
 
+### 3.5 Tab order (addendum)
+
+Added by the owner on 2026-10-11 after M22 to M24 (D78, D79).
+
+| ID | Requirement | Done when |
+|----|-------------|-----------|
+| TAB-1 | A mouse drag of a tab left or right within the tab strip moves the tab to the place under the pointer. The other tabs move aside while the drag runs. | `e2e`: a tab dragged right past the last tab and back left lands in each place. |
+| TAB-2 | The new order is stored like the tab list today: per browser and per workspace (v3 TD-31). | `e2e`: the order is the same after a reload. |
+| TAB-3 | A press that moves less than 5 px is a click, not a drag. Click, double-click (REN-1) and the close mark keep their jobs. | `e2e`: a short move activates the tab and keeps the order. |
+
 ---
 
 ## 4. Edge cases and failure behavior
@@ -144,6 +156,9 @@ Numbering continues from v3 (EDGE-28 to EDGE-34).
 | EDGE-46 | The owner double-clicks the empty tab strip while a name edit is open. | The edit commits first (REN-3). Then NEW-3 creates the document. |
 | EDGE-47 | The create request from a tab strip double-click fails. | Same as New: the message "Could not create a document. Try again." (`web/src/tabs.js:330`). No tab opens. |
 | EDGE-48 | "New 01" to "New 05" exist and "New 05" is deleted. | The next is "New 05" again. The highest number decides (NEW-5). |
+| EDGE-49 | A drag starts on the close mark. | No tab moves and no tab closes. |
+| EDGE-50 | A drag starts in the name field of a rename. | The drag selects text in the field. No tab moves. |
+| EDGE-51 | The pointer leaves the strip during a drag. | The tab keeps the last place it reached. The drop ends the drag. |
 
 ---
 
@@ -176,6 +191,7 @@ Numbering continues from v3 (EDGE-28 to EDGE-34).
 - **Names:** a uniqueness check.
 - **Autosave:** changes to its timing, retries or conflict dialogs (SAV-1 to SAV-5).
 - **Save and shortcuts:** Save never downloads a file; Export stays the download path. No Save all shortcut.
+- **Tab order:** a keyboard move (D79), a drag to another window or workspace, and a scroll of the strip during a drag.
 
 ---
 
@@ -190,13 +206,14 @@ Numbering continues from v3 (EDGE-28 to EDGE-34).
 
 ## 9. Build sequence and status
 
-No `BUILD_PLAN_V4.md` exists. The build uses this sequence as the plan, as v2 did (`PLAN_REVIEW.md` section 9, row of 2026-10-11, pending owner approval). Each phase ends with a two-pass review (`PLAN_REVIEW.md` section 1), logged in `PLAN_REVIEW.md` section 16. Deviations go to `PLAN_REVIEW.md` section 9.
+No `BUILD_PLAN_V4.md` exists. The build uses this sequence as the plan, as v2 did (`PLAN_REVIEW.md` section 9, row of 2026-10-11, approved by the owner on 2026-10-11). Each phase ends with a two-pass review (`PLAN_REVIEW.md` section 1), logged in `PLAN_REVIEW.md` section 16. Deviations go to `PLAN_REVIEW.md` section 9.
 
 | Milestone | Work | Covers | Status |
 |-----------|------|--------|--------|
 | M22 | Extension rule and tab rename | EXT-1 to EXT-3, REN-1 to REN-12, EDGE-35 to EDGE-42 | Done (PR #16). Owner check: the name field with a screen reader, and in Firefox and Safari (`PLAN_REVIEW.md` section 16, M22 row 1). |
 | M23 | Save buttons | SVB-1 to SVB-5, EDGE-43 to EDGE-45 | Done (PR #16) |
 | M24 | New document names and tab strip double-click | NEW-3 to NEW-7, EDGE-46 to EDGE-48 | Done (PR #16) |
+| M25 | Tab order by mouse drag (addendum) | TAB-1 to TAB-3, EDGE-49 to EDGE-51 | Done (PR #16) |
 
 ### Definition of done
 
@@ -222,6 +239,8 @@ No `BUILD_PLAN_V4.md` exists. The build uses this sequence as the plan, as v2 di
 | v2 NFR-5, keyboard and names | Also covers the name field, F2 and both Save buttons. |
 | v3 TD-25, numbering per workspace | Still per workspace, now for "New NN" names (NEW-5). |
 | v3 NEW-1, New entry points | The tab strip double-click is a fourth entry point (NEW-3). |
+| v2 LAY-1, tab order | Tabs were in opening order. A mouse drag now reorders them (TAB-1). |
+| v2 NFR-5, keyboard | Tab reorder is mouse only (D79). |
 | v3 D54, override after rename | A rename that changes the extension sets the language to Auto (REN-8, D61). |
 | v1 `BUILD_PLAN.md` section 2.7, `PATCH /api/documents/:id` | If the server applies REN-5 to REN-9, the returned name can differ from the sent name and the language can become `null`. |
 | Tests | Tests that expect a generated "Untitled N" name change to "New NN". Tests that store "Untitled N" as plain data stay. |

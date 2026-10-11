@@ -134,6 +134,7 @@ The same dialog sets one color per workspace: `#RGB` or `#RRGGBB`, in any letter
 - Rename on a tab (double-click or F2) or in the Documents list. Enter or a click elsewhere keeps the name, Escape cancels. A name without an extension gets `.md`. An extension is the text after the last dot when it is 1 to 10 letters or digits with at least one letter, so `Meeting 10.15` becomes `Meeting 10.15.md`. A rename that changes the extension sets the language back to Auto (detected). The tab text hides the extension; the tooltip shows the full name.
 - New documents are named "New 01", "New 02" and so on ("New 100" after "New 99"), and start as Markdown. The number is 1 + the highest "New NN" number in the workspace. To change the type, use the language list in the status bar. An empty "New NN" tab closes without a prompt and its document is deleted. Documents named "Untitled N" by older versions keep their names, and an empty one asks Keep or Delete like any other document.
 - A double-click on the empty part of the tab strip, right of the last tab, creates a new document, like New.
+- Drag a tab left or right with the mouse to reorder the tabs. The order is kept per browser and per workspace. There is no keyboard way to move a tab.
 - Visual mode shows diagrams as images, so diagram text cannot be selected there. The Mermaid ELK layout is not included; diagrams use the dagre layout.
 - In PDF export, `http:` images do not load. `https:` images do.
 - Notion sync is not built yet.

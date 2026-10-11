@@ -44,6 +44,14 @@ export function writeOpenTabs(getStorage, state, key) {
 }
 
 /**
+ * True when a typed name is the stored one after trimming, so a rename
+ * sends nothing (v4 REN-6). The server would append `.md` to it.
+ * @param {string} typed
+ * @param {string} current
+ */
+export const isUnchangedName = (typed, current) => typed.trim() === current;
+
+/**
  * Decides what a refresh does (TD-15). Only clean tabs change: a dirty tab
  * keeps its text, and its next save reports the conflict or the delete.
  * @param {{ id: string, loaded: boolean, clean: boolean, version: number | null }[]} tabs
@@ -74,6 +82,8 @@ export function planRefresh(tabs, list) {
  * @property {string | null} language Manual override, null = auto.
  * @property {import('@codemirror/state').EditorState | null} state Null until loaded.
  * @property {string} [appliedLanguage] The language id the state's parser uses.
+ * @property {number} [metaStamp] The metaClock value of the last name or
+ *   language change made here.
  */
 
 /**
@@ -99,6 +109,9 @@ export function createTabs({ editor, autosave, api, getStorage, elements, onActi
   // rename request in flight.
   /** @type {{ id: string, input: HTMLInputElement, commit: Promise<boolean> | null } | null} */
   let edit = null;
+  // Counts the name and language changes made here. A list read that started
+  // before one does not bring the old name or language back.
+  let metaClock = 0;
 
   const find = (id) => tabs.find((tab) => tab.id === id);
   const isClean = (tab) => tab.state === null || autosave.status(tab.id) === 'saved';
@@ -187,15 +200,17 @@ export function createTabs({ editor, autosave, api, getStorage, elements, onActi
   }
 
   // Each tab keeps its node, so a focused tab, a name field (v4 EDGE-35) and
-  // the second click of a double-click stay on the same node.
+  // the second click of a double-click stay on the same node. A reorder
+  // (TAB-1) moves nodes, and a moved node that had the focus gets it back.
   function render() {
+    const focused = elements.strip.contains(document.activeElement) ? document.activeElement : null;
     const stop = find(activeId)?.id ?? tabs[0]?.id;
     const nodes = tabs.map((tab) => decorate(tabNode(tab.id) ?? tabElement(tab), tab, stop));
     for (const child of [...elements.strip.children]) if (!nodes.includes(child)) child.remove();
-    // Tabs never change their order, so only new nodes are inserted.
     nodes.forEach((node, index) => {
       if (elements.strip.children[index] !== node) elements.strip.insertBefore(node, elements.strip.children[index] ?? null);
     });
+    if (focused?.isConnected && document.activeElement !== focused) focused.focus({ preventScroll: true });
     const empty = tabs.length === 0;
     elements.empty.hidden = !empty;
     elements.editor.hidden = empty;
@@ -208,11 +223,15 @@ export function createTabs({ editor, autosave, api, getStorage, elements, onActi
    * @returns {Promise<string | null>} The message of a failure, or null.
    */
   async function renameDocument(id, typed, { current, workspace }) {
-    if (typed.trim() === current) return null;
+    if (isUnchangedName(typed, current)) return null;
     const { status, data } = await api.updateDocument(id, { name: typed }, workspace);
     if (status === 200) {
+      // A failed name field on this tab (a dialog rename after it) is stale
+      // now, so a later Enter cannot overwrite this name.
+      if (edit?.id === id && !edit.commit) endEdit();
       const tab = find(id);
       if (tab) {
+        tab.metaStamp = ++metaClock;
         tab.name = data.name;
         tab.language = data.language;
         syncLanguage(tab);
@@ -265,6 +284,67 @@ export function createTabs({ editor, autosave, api, getStorage, elements, onActi
       },
     );
     return current.commit;
+  }
+
+  // Reorder by mouse drag (v4 TAB-1 to TAB-3, D78: the mouse only). A press
+  // becomes a drag only after the pointer moves DRAG_DISTANCE px, so a click
+  // stays a click, and a drag never ends in a click. A press on the close
+  // mark or in the name field starts no drag (EDGE-49, EDGE-50). The move
+  // listeners are on the window, and a pointer outside the strip (above,
+  // below, left or right) moves nothing, so the tab keeps the last place it
+  // reached (EDGE-51).
+  const DRAG_DISTANCE = 5;
+  elements.strip.addEventListener('pointerdown', (event) => {
+    const target = /** @type {HTMLElement} */ (event.target);
+    const node = target.closest('.tab');
+    if (event.pointerType !== 'mouse' || event.button !== 0 || !event.isPrimary) return;
+    if (!node || target.closest('.tab-close, .tab-name-input')) return;
+    const id = node.dataset.id;
+    const start = { x: event.clientX, y: event.clientY };
+    let dragging = false;
+    const move = (/** @type {PointerEvent} */ moved) => {
+      // A move with the button up ends a drag whose pointerup was lost.
+      if ((moved.buttons & 1) === 0) {
+        end();
+        return;
+      }
+      if (!dragging && Math.hypot(moved.clientX - start.x, moved.clientY - start.y) < DRAG_DISTANCE) return;
+      dragging = true;
+      tabNode(id)?.classList.add('dragging');
+      const strip = elements.strip.getBoundingClientRect();
+      const inStrip = moved.clientX >= strip.left && moved.clientX <= strip.right && moved.clientY >= strip.top && moved.clientY <= strip.bottom;
+      if (inStrip) moveTab(id, moved.clientX);
+    };
+    const end = () => {
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', end);
+      window.removeEventListener('pointercancel', end);
+      tabNode(id)?.classList.remove('dragging');
+      if (!dragging) return;
+      if (find(id)) persist();
+      // The click that follows the release would activate a tab.
+      const swallow = (/** @type {MouseEvent} */ click) => click.stopPropagation();
+      window.addEventListener('click', swallow, { capture: true, once: true });
+      setTimeout(() => window.removeEventListener('click', swallow, { capture: true }), 0);
+    };
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', end);
+    window.addEventListener('pointercancel', end);
+  });
+
+  // Puts the tab where the pointer is: after every other tab whose middle is
+  // left of x. The order is stored at the end of the drag (TAB-2).
+  function moveTab(id, x) {
+    const from = tabs.findIndex((tab) => tab.id === id);
+    if (from < 0) return;
+    const to = tabs.filter((tab) => {
+      if (tab.id === id) return false;
+      const box = tabNode(tab.id)?.getBoundingClientRect();
+      return box !== undefined && box.left + box.width / 2 < x;
+    }).length;
+    if (to === from) return;
+    tabs.splice(to, 0, ...tabs.splice(from, 1));
+    render();
   }
 
   const MOVES = { ArrowLeft: -1, ArrowRight: 1 };
@@ -477,6 +557,9 @@ export function createTabs({ editor, autosave, api, getStorage, elements, onActi
      * Cancel. Returns true when the tab closed.
      */
     async close(id) {
+      // A name edit on this tab commits first, so the close flow sees the new
+      // name (EDGE-41). A failed rename keeps the tab and its field open.
+      if (edit?.id === id && !(await commitEdit())) return false;
       const tab = find(id);
       if (!tab) return false;
       let content = controller.content(id);
@@ -596,10 +679,14 @@ export function createTabs({ editor, autosave, api, getStorage, elements, onActi
      *   it. null when a workspace switch dropped the tab meanwhile (TD-41).
      */
     async setLanguage(id, language) {
+      // A pending rename goes first, so its Auto reset (REN-8) cannot undo
+      // this choice.
+      await commitEdit();
       const { status, data, stale } = await api.updateDocument(id, { language });
       if (stale) return null;
       const tab = find(id);
       if (status !== 200 || !tab) return false;
+      tab.metaStamp = ++metaClock;
       tab.language = data.language;
       syncLanguage(tab);
       onActiveChange();
@@ -617,6 +704,7 @@ export function createTabs({ editor, autosave, api, getStorage, elements, onActi
       // Only tabs that were open before the list was read count. A tab opened
       // during the read (New, a drop) is not in the list yet, but not gone.
       const known = new Set(tabs.map((tab) => tab.id));
+      const started = metaClock;
       const { status, data } = await api.listDocuments();
       if (status !== 200) return;
       const plan = planRefresh(
@@ -627,13 +715,15 @@ export function createTabs({ editor, autosave, api, getStorage, elements, onActi
       );
       for (const [id, doc] of plan.meta) {
         const tab = find(id);
-        if (!tab) continue;
+        if (!tab || (tab.metaStamp ?? 0) > started) continue;
         tab.name = doc.name;
         tab.named = true;
         tab.language = doc.language;
         syncLanguage(tab);
       }
-      for (const id of plan.remove) removeTab(id);
+      // A tab with an open name field stays. Its commit says the document is
+      // gone (REN-12).
+      for (const id of plan.remove) if (id !== edit?.id) removeTab(id);
       await Promise.all(plan.reload.map((id) => reload(find(id))));
       render();
       onActiveChange();

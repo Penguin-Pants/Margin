@@ -356,6 +356,12 @@ button.danger {
   white-space: nowrap;
 }
 
+/* A tab that the mouse drags to a new place (v4 TAB-1). */
+.tab.dragging {
+  opacity: 0.6;
+  cursor: grabbing;
+}
+
 /* The name field of a rename on the tab (v4 REN-1). The tab class wins
    over the input[type="text"] style of the dialogs. */
 .tab .tab-name-input {

@@ -106,7 +106,11 @@ export function createDocList({ api, tabs, autosave, exclusive, root, button, pa
       title: 'Rename document',
       fields: [{ name: 'name', label: 'Name', value: doc.name }],
       submitLabel: 'Rename',
-      onSubmit: ({ name }) => tabs.renameDocument(doc.id, name, { current: doc.name, workspace }),
+      // A pending tab rename goes first, so the dialog's name is the last.
+      onSubmit: async ({ name }) => {
+        await tabs.commitEdit();
+        return tabs.renameDocument(doc.id, name, { current: doc.name, workspace });
+      },
     });
     if (result === null) return;
     await refresh();
@@ -117,6 +121,9 @@ export function createDocList({ api, tabs, autosave, exclusive, root, button, pa
   // 404 and the EDGE-1 dialog, so no text is lost (R11).
   async function moveDocument(doc, target) {
     await exclusive('move', async () => {
+      // A pending tab rename finishes in this workspace first. A failed one
+      // keeps its field and message, and nothing moves.
+      if (!(await tabs.commitEdit())) return;
       if (!(await autosave.flush(doc.id))) {
         showMessage('Not moved: unsaved changes could not be saved.');
         return;
