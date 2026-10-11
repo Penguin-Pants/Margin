@@ -82,6 +82,8 @@ export function planRefresh(tabs, list) {
  * @property {string | null} language Manual override, null = auto.
  * @property {import('@codemirror/state').EditorState | null} state Null until loaded.
  * @property {string} [appliedLanguage] The language id the state's parser uses.
+ * @property {number} [metaStamp] The metaClock value of the last name or
+ *   language change made here.
  */
 
 /**
@@ -107,6 +109,9 @@ export function createTabs({ editor, autosave, api, getStorage, elements, onActi
   // rename request in flight.
   /** @type {{ id: string, input: HTMLInputElement, commit: Promise<boolean> | null } | null} */
   let edit = null;
+  // Counts the name and language changes made here. A list read that started
+  // before one does not bring the old name or language back.
+  let metaClock = 0;
 
   const find = (id) => tabs.find((tab) => tab.id === id);
   const isClean = (tab) => tab.state === null || autosave.status(tab.id) === 'saved';
@@ -223,6 +228,7 @@ export function createTabs({ editor, autosave, api, getStorage, elements, onActi
     if (status === 200) {
       const tab = find(id);
       if (tab) {
+        tab.metaStamp = ++metaClock;
         tab.name = data.name;
         tab.language = data.language;
         syncLanguage(tab);
@@ -546,6 +552,9 @@ export function createTabs({ editor, autosave, api, getStorage, elements, onActi
      * Cancel. Returns true when the tab closed.
      */
     async close(id) {
+      // A name edit on this tab commits first, so the close flow sees the new
+      // name (EDGE-41). A failed rename keeps the tab and its field open.
+      if (edit?.id === id && !(await commitEdit())) return false;
       const tab = find(id);
       if (!tab) return false;
       let content = controller.content(id);
@@ -665,10 +674,14 @@ export function createTabs({ editor, autosave, api, getStorage, elements, onActi
      *   it. null when a workspace switch dropped the tab meanwhile (TD-41).
      */
     async setLanguage(id, language) {
+      // A pending rename goes first, so its Auto reset (REN-8) cannot undo
+      // this choice.
+      await commitEdit();
       const { status, data, stale } = await api.updateDocument(id, { language });
       if (stale) return null;
       const tab = find(id);
       if (status !== 200 || !tab) return false;
+      tab.metaStamp = ++metaClock;
       tab.language = data.language;
       syncLanguage(tab);
       onActiveChange();
@@ -686,6 +699,7 @@ export function createTabs({ editor, autosave, api, getStorage, elements, onActi
       // Only tabs that were open before the list was read count. A tab opened
       // during the read (New, a drop) is not in the list yet, but not gone.
       const known = new Set(tabs.map((tab) => tab.id));
+      const started = metaClock;
       const { status, data } = await api.listDocuments();
       if (status !== 200) return;
       const plan = planRefresh(
@@ -696,13 +710,15 @@ export function createTabs({ editor, autosave, api, getStorage, elements, onActi
       );
       for (const [id, doc] of plan.meta) {
         const tab = find(id);
-        if (!tab) continue;
+        if (!tab || (tab.metaStamp ?? 0) > started) continue;
         tab.name = doc.name;
         tab.named = true;
         tab.language = doc.language;
         syncLanguage(tab);
       }
-      for (const id of plan.remove) removeTab(id);
+      // A tab with an open name field stays. Its commit says the document is
+      // gone (REN-12).
+      for (const id of plan.remove) if (id !== edit?.id) removeTab(id);
       await Promise.all(plan.reload.map((id) => reload(find(id))));
       render();
       onActiveChange();

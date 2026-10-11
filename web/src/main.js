@@ -544,9 +544,11 @@ $('find').addEventListener('click', () => tabs.shownId() && openFind(editor.view
 // label shows the result. After a mouse click on a button, the focus goes
 // back to the editor, as Ctrl+S keeps it there (like the Visual toggle).
 async function saveActive({ refocus = false } = {}) {
-  if (!(await tabs.commitEdit())) return;
+  // The tab where Save was pressed, also when another tab shows after the
+  // rename.
   const id = tabs.shownId();
-  if (!id) return;
+  if (!(await tabs.commitEdit())) return;
+  if (!id || !tabs.get(id)) return;
   if (refocus) editor.focus();
   autosave.flush(id);
 }

@@ -684,6 +684,18 @@ Two-pass review of each V4 phase diff (`REQUIREMENTS_V4.md` section 9). Same met
 | M25 | 6 | The TAB-3 test passed with any threshold. | Confirmed | The test checks that 4.2 px starts no drag and 5 px does. It failed first. |
 | M25 | 7 | The TAB-1 test did not drop past the last tab or move a tab to the first place, and the EDGE-50 test did not check the text selection. | Confirmed | Both tests extended. |
 | M25 | 8 | The 5 px rule measured the horizontal move only; TAB-3 says "moves". | Confirmed | Fixed: the distance counts both axes (`Math.hypot`). |
+| PR #16 Codex | 1 | The close mark during a rename of an empty "New NN" ran the close flow with the old name, so the document was deleted with no prompt. | Confirmed | Fixed in PR #17: `close` commits a name edit on its tab first; a failed rename keeps the tab. E2E test. It failed first. |
+| PR #16 Codex | 2 | A list read that started before a rename brought the old name back until the next refresh. | Confirmed | Fixed in PR #17: a counter of local name and language changes; a refresh skips tabs changed after its read started. E2E test with a held reply. It failed first. |
+| PR #16 Codex | 3 | Ctrl+S during a slow rename, then a tab change, saved the other tab. | Confirmed | Fixed in PR #17: Save takes the shown tab before it waits for the rename. E2E test. It failed first. |
+| PR #16 Codex | 4 | A focus refresh after a delete elsewhere closed a tab with an open name field and dropped the typed name with no message. | Confirmed | Fixed in PR #17: that tab stays; its commit says "This document no longer exists." E2E test. It failed first. |
+| PR #16 Codex | 5 | Save all after a failed rename said "All documents saved.". | Rejected | Already fixed before the merge (M23 row 1). |
+| PR #16 Codex | 6 | A language chosen while a rename was pending could be reset to Auto by the rename. | Confirmed | Fixed in PR #17: a language change waits for a pending rename. E2E test. It failed first. |
+| PR #16 Codex | 7 | New should stop when the pending rename fails. | Rejected | The owner kept this behavior on 2026-10-11 (M24 row 6). |
+| PR #16 Codex | 8 | New across a workspace switch created the document in the new workspace. | Rejected | Already fixed before the merge (M24 row 2). |
+| PR #16 Codex | 9 | A Move while a tab rename was pending made the rename fail with 404 and lost the typed name. | Confirmed | Fixed in PR #17: a Move waits for a pending tab rename. E2E test. It failed first. |
+| PR #16 Codex | 10 | `New 01 ` (a trailing space added) counted as unchanged, so no `.md`. | Rejected | REN-6 compares the trimmed name (`isUnchangedName`). The owner kept it on 2026-10-11. |
+| PR #16 Codex | 11 | The M24 status was stale. | Rejected | Already fixed before the merge (M24 row 5). |
+| PR #16 Codex | 12 | A Rename dialog submitted while a tab rename was pending could be overwritten by the older tab rename. | Confirmed | Fixed in PR #17: the dialog waits for a pending tab rename. E2E test. It failed first. |
 
 ### V4 validation environment
 
@@ -697,3 +709,4 @@ Two-pass review of each V4 phase diff (`REQUIREMENTS_V4.md` section 9). Same met
 - Owner checks: the `@smoke` specs in Firefox and WebKit, and the name field with a screen reader and in Firefox and Safari (section 16, M22 row 1).
 - Owner review (2026-10-11): 15 deviations approved in chat. REN-6 unit test added: `npm test` 441 of 441.
 - M25 (PR #17): `npm test` 441 of 441. Chromium e2e 226 of 226 with 7 tests in `e2e/tab-order.spec.js`. The 2 first drag tests failed first on an assertion; the review tests for rows 1 to 4 and 6 failed first.
+- PR #16 Codex fixes (PR #17): `npm test` 441 of 441, Chromium e2e 233 of 233. The 7 tests in `e2e/rename-races.spec.js` failed first on an assertion (the Codex 2 test after its held reply was made to carry the old list).
