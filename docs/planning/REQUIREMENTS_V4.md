@@ -190,7 +190,7 @@ Numbering continues from v3 (EDGE-28 to EDGE-34).
 
 ## 9. Build sequence and status
 
-No `BUILD_PLAN_V4.md` exists. The build uses this sequence as the plan, as v2 did (`PLAN_REVIEW.md` section 9, row of 2026-10-11, pending owner approval). Each phase ends with a two-pass review (`PLAN_REVIEW.md` section 1), logged in `PLAN_REVIEW.md` section 16. Deviations go to `PLAN_REVIEW.md` section 9.
+No `BUILD_PLAN_V4.md` exists. The build uses this sequence as the plan, as v2 did (`PLAN_REVIEW.md` section 9, row of 2026-10-11, approved by the owner on 2026-10-11). Each phase ends with a two-pass review (`PLAN_REVIEW.md` section 1), logged in `PLAN_REVIEW.md` section 16. Deviations go to `PLAN_REVIEW.md` section 9.
 
 | Milestone | Work | Covers | Status |
 |-----------|------|--------|--------|

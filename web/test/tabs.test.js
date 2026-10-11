@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { planRefresh, readOpenTabs, tabsKey, writeOpenTabs } from '../src/tabs.js';
+import { isUnchangedName, planRefresh, readOpenTabs, tabsKey, writeOpenTabs } from '../src/tabs.js';
 
 function fakeStorage(initial = {}) {
   const data = new Map(Object.entries(initial));
@@ -75,4 +75,12 @@ test('each workspace stores its tabs under its own key, Personal under the v1 ke
   writeOpenTabs(() => storage, { ids: ['w'], activeId: 'w' }, tabsKey('work'));
   assert.deepEqual(readOpenTabs(() => storage, tabsKey('work')), { ids: ['w'], activeId: 'w' });
   assert.deepEqual(readOpenTabs(() => storage, tabsKey('personal')), { ids: ['p'], activeId: 'p' });
+});
+
+test('a typed name that only adds spaces around the stored name is unchanged, any other is a rename (v4 REN-6)', () => {
+  assert.equal(isUnchangedName('New 01', 'New 01'), true);
+  assert.equal(isUnchangedName('  New 01 ', 'New 01'), true);
+  assert.equal(isUnchangedName('New 01.', 'New 01'), false);
+  assert.equal(isUnchangedName('new 01', 'New 01'), false);
+  assert.equal(isUnchangedName('todo', 'New 01'), false);
 });

@@ -44,6 +44,14 @@ export function writeOpenTabs(getStorage, state, key) {
 }
 
 /**
+ * True when a typed name is the stored one after trimming, so a rename
+ * sends nothing (v4 REN-6). The server would append `.md` to it.
+ * @param {string} typed
+ * @param {string} current
+ */
+export const isUnchangedName = (typed, current) => typed.trim() === current;
+
+/**
  * Decides what a refresh does (TD-15). Only clean tabs change: a dirty tab
  * keeps its text, and its next save reports the conflict or the delete.
  * @param {{ id: string, loaded: boolean, clean: boolean, version: number | null }[]} tabs
@@ -208,7 +216,7 @@ export function createTabs({ editor, autosave, api, getStorage, elements, onActi
    * @returns {Promise<string | null>} The message of a failure, or null.
    */
   async function renameDocument(id, typed, { current, workspace }) {
-    if (typed.trim() === current) return null;
+    if (isUnchangedName(typed, current)) return null;
     const { status, data } = await api.updateDocument(id, { name: typed }, workspace);
     if (status === 200) {
       const tab = find(id);
