@@ -142,6 +142,11 @@ test('a drag that leaves the strip keeps the last place it reached (EDGE-51)', a
   await page.mouse.move((await page.locator('#tabstrip').boundingBox()).x + 1, outside, { steps: 8 });
   await page.mouse.move(await pastLast(page), outside, { steps: 8 });
   expect(await order(page)).toEqual(['b.txt', 'a.txt', 'c.txt']);
+  // A fast move that jumps out of the strip to its left, at strip height
+  // (over the outline), in one pointer event.
+  await page.mouse.move(await rightOf(page, 'a.txt'), y, { steps: 4 });
+  await page.mouse.move((await page.locator('#tabstrip').boundingBox()).x - 20, y, { steps: 1 });
+  expect(await order(page)).toEqual(['b.txt', 'a.txt', 'c.txt']);
   await page.mouse.up();
   // The drop ended the drag: a move over the strip changes nothing.
   await page.mouse.move((await page.locator('#tabstrip').boundingBox()).x + 1, y, { steps: 8 });

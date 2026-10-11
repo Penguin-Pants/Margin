@@ -684,6 +684,9 @@ Two-pass review of each V4 phase diff (`REQUIREMENTS_V4.md` section 9). Same met
 | M25 | 6 | The TAB-3 test passed with any threshold. | Confirmed | The test checks that 4.2 px starts no drag and 5 px does. It failed first. |
 | M25 | 7 | The TAB-1 test did not drop past the last tab or move a tab to the first place, and the EDGE-50 test did not check the text selection. | Confirmed | Both tests extended. |
 | M25 | 8 | The 5 px rule measured the horizontal move only; TAB-3 says "moves". | Confirmed | Fixed: the distance counts both axes (`Math.hypot`). |
+| PR #17 Codex | 1 | A pointer that left the strip to the left or right still moved the tab (EDGE-51); the M25 row 1 fix checked only above and below. | Confirmed | Fixed: the pointer must be inside the strip's box. The EDGE-51 test moves left of the strip at strip height. It failed first. |
+| PR #17 Codex | 2 | Touch presses reordered tabs. | Rejected | Already fixed in ff22213 (M25 row 3). |
+| PR #17 Codex | 3 | The click after a drag activated the tab. | Rejected | Already fixed in ff22213 (M25 row 2). |
 | PR #16 Codex | 1 | The close mark during a rename of an empty "New NN" ran the close flow with the old name, so the document was deleted with no prompt. | Confirmed | Fixed in PR #17: `close` commits a name edit on its tab first; a failed rename keeps the tab. E2E test. It failed first. |
 | PR #16 Codex | 2 | A list read that started before a rename brought the old name back until the next refresh. | Confirmed | Fixed in PR #17: a counter of local name and language changes; a refresh skips tabs changed after its read started. E2E test with a held reply. It failed first. |
 | PR #16 Codex | 3 | Ctrl+S during a slow rename, then a tab change, saved the other tab. | Confirmed | Fixed in PR #17: Save takes the shown tab before it waits for the rename. E2E test. It failed first. |

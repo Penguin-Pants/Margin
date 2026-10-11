@@ -287,8 +287,9 @@ export function createTabs({ editor, autosave, api, getStorage, elements, onActi
   // becomes a drag only after the pointer moves DRAG_DISTANCE px, so a click
   // stays a click, and a drag never ends in a click. A press on the close
   // mark or in the name field starts no drag (EDGE-49, EDGE-50). The move
-  // listeners are on the window, and a pointer outside the strip moves
-  // nothing, so the tab keeps the last place it reached (EDGE-51).
+  // listeners are on the window, and a pointer outside the strip (above,
+  // below, left or right) moves nothing, so the tab keeps the last place it
+  // reached (EDGE-51).
   const DRAG_DISTANCE = 5;
   elements.strip.addEventListener('pointerdown', (event) => {
     const target = /** @type {HTMLElement} */ (event.target);
@@ -308,7 +309,8 @@ export function createTabs({ editor, autosave, api, getStorage, elements, onActi
       dragging = true;
       tabNode(id)?.classList.add('dragging');
       const strip = elements.strip.getBoundingClientRect();
-      if (moved.clientY >= strip.top && moved.clientY <= strip.bottom) moveTab(id, moved.clientX);
+      const inStrip = moved.clientX >= strip.left && moved.clientX <= strip.right && moved.clientY >= strip.top && moved.clientY <= strip.bottom;
+      if (inStrip) moveTab(id, moved.clientX);
     };
     const end = () => {
       window.removeEventListener('pointermove', move);
