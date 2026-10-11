@@ -121,8 +121,9 @@ export function createDocList({ api, tabs, autosave, exclusive, root, button, pa
   // 404 and the EDGE-1 dialog, so no text is lost (R11).
   async function moveDocument(doc, target) {
     await exclusive('move', async () => {
-      // A pending tab rename finishes in this workspace first.
-      await tabs.commitEdit();
+      // A pending tab rename finishes in this workspace first. A failed one
+      // keeps its field and message, and nothing moves.
+      if (!(await tabs.commitEdit())) return;
       if (!(await autosave.flush(doc.id))) {
         showMessage('Not moved: unsaved changes could not be saved.');
         return;

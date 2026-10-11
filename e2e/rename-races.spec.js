@@ -156,3 +156,41 @@ test('a Move while a tab rename is pending moves the renamed document (Codex 9)'
     .toEqual(['inline.txt']);
   await expect(message(page)).not.toHaveText('This document no longer exists.');
 });
+
+test('a Move after a failed tab rename moves nothing and keeps the field (PR #17 Codex A)', async ({ page, api }) => {
+  const [id] = await openDocs(page, api, [['a.txt', 'aaa']]);
+  await page.route(`**/api/documents/${id}*`, (route) => {
+    const request = route.request();
+    return request.method() === 'PATCH' && 'name' in (request.postDataJSON() ?? {}) ? route.abort() : route.continue();
+  });
+  await tab(page, 'a.txt').dblclick();
+  await page.keyboard.type('lost');
+  await page.getByRole('button', { name: 'Documents' }).click();
+  await page.getByRole('button', { name: 'Move a.txt to Work' }).click();
+  await expect(message(page)).toHaveText('Cannot connect to the server. Try again.');
+  await page.evaluate(() => new Promise((resolve) => setTimeout(resolve, 300)));
+  expect(await (await api.get('/api/documents?workspace=work')).json()).toEqual([]);
+  await expect(field(page)).toHaveValue('lost.txt');
+});
+
+test('a dialog rename after a failed tab rename closes the stale field (PR #17 Codex B)', async ({ page, api }) => {
+  const [id] = await openDocs(page, api, [['a.txt', 'aaa']]);
+  // The tab rename fails each time, as an invalid name or a network loss can.
+  await page.route(`**/api/documents/${id}*`, (route) => {
+    const request = route.request();
+    const failing = request.method() === 'PATCH' && request.postDataJSON()?.name?.startsWith('inline');
+    return failing ? route.abort() : route.continue();
+  });
+  await tab(page, 'a.txt').dblclick();
+  await page.keyboard.type('inline');
+  await page.getByRole('button', { name: 'Documents' }).click();
+  await expect(message(page)).toHaveText('Cannot connect to the server. Try again.');
+  await page.getByRole('button', { name: 'Rename a.txt' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Rename document' });
+  await dialog.getByLabel('Name').fill('dialog.txt');
+  await dialog.getByRole('button', { name: 'Rename' }).click();
+  await expect(dialog).toBeHidden();
+  await expect(field(page)).toHaveCount(0);
+  await expect(tab(page, 'dialog.txt')).toBeVisible();
+  expect((await stored(api, id)).name).toBe('dialog.txt');
+});

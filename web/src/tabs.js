@@ -226,6 +226,9 @@ export function createTabs({ editor, autosave, api, getStorage, elements, onActi
     if (isUnchangedName(typed, current)) return null;
     const { status, data } = await api.updateDocument(id, { name: typed }, workspace);
     if (status === 200) {
+      // A failed name field on this tab (a dialog rename after it) is stale
+      // now, so a later Enter cannot overwrite this name.
+      if (edit?.id === id && !edit.commit) endEdit();
       const tab = find(id);
       if (tab) {
         tab.metaStamp = ++metaClock;
