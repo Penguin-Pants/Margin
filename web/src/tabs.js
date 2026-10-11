@@ -2,7 +2,7 @@
 // localStorage (v3 TD-31). Content loads on first activation. Clean tabs
 // refresh from the server on window focus and on tab activation (TD-15).
 
-import { baseName, NAME_MAX_LENGTH, UNTITLED_NAME } from '../../shared/contract.js';
+import { baseName, NAME_MAX_LENGTH, NEW_NAME } from '../../shared/contract.js';
 import { choose } from './dialogs.js';
 import { languageSupport, resolveLanguage } from './languages.js';
 import { modName } from './shortcuts.js';
@@ -284,6 +284,12 @@ export function createTabs({ editor, autosave, api, getStorage, elements, onActi
     event.preventDefault();
   });
 
+  // A double-click on the empty part of the strip, not on a tab, does what
+  // New does, also with no tab open (v4 NEW-3).
+  elements.strip.addEventListener('dblclick', (event) => {
+    if (event.target === elements.strip) controller.newDocument();
+  });
+
   /** Makes the tab's state from server content and starts autosave for it. */
   function load(tab, doc) {
     tab.name = doc.name;
@@ -416,8 +422,10 @@ export function createTabs({ editor, autosave, api, getStorage, elements, onActi
       await controller.activate(id);
     },
 
-    /** Creates an "Untitled N" Markdown document and opens it. */
+    /** Creates a "New NN" Markdown document and opens it (v4 NEW-6). */
     async newDocument() {
+      // An open name edit commits first (v4 EDGE-46).
+      await commitEdit();
       const { status, data, stale } = await api.createDocument('', undefined, 'markdown');
       if (stale) return;
       if (status !== 201) {
@@ -452,7 +460,7 @@ export function createTabs({ editor, autosave, api, getStorage, elements, onActi
     },
 
     /**
-     * The close flow (section 2.8, DOC-5, DOC-6). An empty "Untitled N"
+     * The close flow (section 2.8, DOC-5, DOC-6). An empty "New NN" (v4 NEW-7)
      * closes and is deleted with no prompt. Otherwise the user chooses Keep
      * (saves first; a failed save keeps the tab open), Delete permanently or
      * Cancel. Returns true when the tab closed.
@@ -475,7 +483,7 @@ export function createTabs({ editor, autosave, api, getStorage, elements, onActi
         content = data.content;
       }
 
-      if (content === '' && UNTITLED_NAME.test(tab.name)) {
+      if (content === '' && NEW_NAME.test(tab.name)) {
         removeTab(id);
         await deleteOnServer(id);
         return true;

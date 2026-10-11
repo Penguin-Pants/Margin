@@ -48,7 +48,7 @@ test('a new document starts as Markdown and a named one keeps Auto', async ({ pa
   const doc = await createDoc(api, 'notes.txt', 'just text');
   await login(page);
   await page.getByRole('button', { name: 'New', exact: true }).click();
-  await expect(page.getByRole('tab', { name: /^Untitled \d+$/ })).toHaveAttribute('aria-selected', 'true');
+  await expect(page.getByRole('tab', { name: /^New \d+$/ })).toHaveAttribute('aria-selected', 'true');
   await expect(languageSelect(page)).toHaveValue('markdown');
   await expect(content(page)).toHaveAttribute('data-language', 'markdown');
 

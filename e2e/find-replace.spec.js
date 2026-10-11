@@ -75,7 +75,7 @@ test('Replace all changes every match in the current tab and none in other tabs'
   await panel(page).getByLabel('Replace with').fill('y');
   await panel(page).getByRole('button', { name: 'Replace all' }).click();
   await expect(editor(page)).toHaveText('y or y');
-  await page.getByRole('tab', { name: 'Untitled 1' }).click();
+  await page.getByRole('tab', { name: 'New 01' }).click();
   await expect(editor(page)).toHaveText('x and x');
 });
 
@@ -118,8 +118,8 @@ test('each tab keeps its own search panel', async ({ page }) => {
   await documentWith(page, 'second');
   await openFind(page);
   await page.keyboard.type('sec');
-  await page.getByRole('tab', { name: 'Untitled 1' }).click();
+  await page.getByRole('tab', { name: 'New 01' }).click();
   await expect(panel(page)).toHaveCount(0);
-  await page.getByRole('tab', { name: 'Untitled 2' }).click();
+  await page.getByRole('tab', { name: 'New 02' }).click();
   await expect(panel(page).getByLabel('Find')).toHaveValue('sec');
 });

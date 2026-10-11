@@ -1,7 +1,7 @@
 // Document storage (BUILD_PLAN.md section 2.6). Every query names the
 // workspace (v3 TD-24): a document of the other workspace reads as missing.
 import { randomUUID } from 'node:crypto';
-import { extensionOf, NAME_MAX_LENGTH, UNTITLED_NAME } from '../../../shared/contract.js';
+import { extensionOf, NAME_MAX_LENGTH, NEW_NAME, newName } from '../../../shared/contract.js';
 import { transaction } from '../db.js';
 
 // node:sqlite (seen in Node 24.13) cuts a bound TEXT value at its first NUL
@@ -77,7 +77,7 @@ export function listDocuments(db, workspace) {
 export function createDocument(db, { workspace, name, content, language = null, now }) {
   return transaction(db, () => {
     const id = randomUUID();
-    const finalName = name ?? nextUntitledName(db, workspace);
+    const finalName = name ?? nextNewName(db, workspace);
     db.prepare(
       'INSERT INTO documents (id, workspace, name, content, language, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
     ).run(id, workspace, finalName, encodeContent(content), language, now, now);
@@ -85,16 +85,17 @@ export function createDocument(db, { workspace, name, content, language = null, 
   });
 }
 
-// N = 1 + the highest N among names "Untitled N" in the workspace (TD-25).
-// Runs inside the insert transaction.
-function nextUntitledName(db, workspace) {
+// The number is 1 + the highest number among names "New NN" in the
+// workspace (v4 NEW-5, TD-25). "Untitled N" names do not count. Runs inside
+// the insert transaction.
+function nextNewName(db, workspace) {
   let highest = 0;
-  const rows = db.prepare("SELECT name FROM documents WHERE workspace = ? AND name LIKE 'Untitled %'").all(workspace);
+  const rows = db.prepare("SELECT name FROM documents WHERE workspace = ? AND name LIKE 'New %'").all(workspace);
   for (const { name } of rows) {
-    const n = Number(UNTITLED_NAME.exec(name)?.[1]);
+    const n = Number(NEW_NAME.exec(name)?.[1]);
     if (Number.isSafeInteger(n) && n > highest) highest = n;
   }
-  return `Untitled ${highest + 1}`;
+  return newName(highest + 1);
 }
 
 /**

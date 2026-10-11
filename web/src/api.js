@@ -87,7 +87,7 @@ export const api = {
   listDocuments: (target) => docCall('GET', '/api/documents', {}, target),
   /**
    * @param {string} [content]
-   * @param {string} [name] Omit for "Untitled N".
+   * @param {string} [name] Omit for "New NN" (v4 NEW-4).
    * @param {string | null} [language] Omit or null for auto.
    */
   createDocument: (content = '', name, language) => {

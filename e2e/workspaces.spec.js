@@ -45,8 +45,8 @@ test('the window title names the workspace at first paint (WS-3, WS-4)', async (
 test('in Work, New creates a Work document and Personal stays empty (WS-6)', async ({ page, api }) => {
   await loginToWork(page);
   await newDocument(page);
-  await expect(page.getByRole('tab', { name: 'Untitled 1' })).toHaveAttribute('aria-selected', 'true');
-  expect(await names(api, 'work')).toEqual(['Untitled 1']);
+  await expect(page.getByRole('tab', { name: 'New 01' })).toHaveAttribute('aria-selected', 'true');
+  expect(await names(api, 'work')).toEqual(['New 01']);
   expect(await names(api, 'personal')).toEqual([]);
 });
 
@@ -74,8 +74,8 @@ test('in Work, the conflict copy goes to Work (WS-6, CON-1)', async ({ page, api
   await page.keyboard.type(' more');
   const dialog = page.getByRole('dialog', { name: 'This document changed on another device.' });
   await dialog.getByRole('button', { name: 'Save mine as a new document' }).click();
-  await expect(page.getByRole('tab', { name: 'Untitled 1 (conflict copy)' })).toHaveAttribute('aria-selected', 'true');
-  expect(await names(api, 'work')).toEqual(['Untitled 1 (conflict copy)', 'Untitled 1']);
+  await expect(page.getByRole('tab', { name: 'New 01 (conflict copy)' })).toHaveAttribute('aria-selected', 'true');
+  expect(await names(api, 'work')).toEqual(['New 01 (conflict copy)', 'New 01']);
   expect(await names(api, 'personal')).toEqual([]);
 });
 
@@ -87,8 +87,8 @@ test('in Work, the copy after a delete elsewhere goes to Work (WS-6, EDGE-1)', a
   await page.keyboard.type(' more');
   const dialog = page.getByRole('dialog', { name: 'This document was deleted on another device.' });
   await dialog.getByRole('button', { name: 'Save mine as a new document' }).click();
-  await expect(page.getByRole('tab', { name: 'Untitled 1' })).toHaveAttribute('aria-selected', 'true');
-  expect(await names(api, 'work')).toEqual(['Untitled 1']);
+  await expect(page.getByRole('tab', { name: 'New 01' })).toHaveAttribute('aria-selected', 'true');
+  expect(await names(api, 'work')).toEqual(['New 01']);
   expect(await names(api, 'personal')).toEqual([]);
 });
 
@@ -170,8 +170,8 @@ test('switching away and back restores each workspace\'s tabs, active tab and ti
   await expect(editor(page)).toHaveText('aaa');
 
   await switchTo(page, 'Work');
-  await expect(page.getByRole('tab', { name: 'Untitled 1' })).toHaveAttribute('aria-selected', 'true');
-  expect(await names(api, 'work')).toEqual(['Untitled 1']);
+  await expect(page.getByRole('tab', { name: 'New 01' })).toHaveAttribute('aria-selected', 'true');
+  expect(await names(api, 'work')).toEqual(['New 01']);
   expect(await names(api, 'personal')).toEqual(['b.md', 'a.md']);
 });
 
@@ -324,8 +324,8 @@ test('two browsers in different workspaces work independently (EDGE-34)', async 
     await expect(page).toHaveTitle('Personal - Margin');
     await expect(page.getByRole('tab')).toHaveCount(1);
     await expect(second.getByRole('tab')).toHaveCount(1);
-    expect(await names(api, 'personal')).toEqual(['Untitled 1']);
-    expect(await names(api, 'work')).toEqual(['Untitled 1']);
+    expect(await names(api, 'personal')).toEqual(['New 01']);
+    expect(await names(api, 'work')).toEqual(['New 01']);
   } finally {
     await other.close();
   }

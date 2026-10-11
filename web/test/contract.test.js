@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { baseName, extensionOf } from '../../shared/contract.js';
+import { baseName, extensionOf, NEW_NAME, newName } from '../../shared/contract.js';
 
 test('an extension is 1 to 10 letters or digits after the last dot, with at least one letter (EXT-1)', () => {
   for (const [name, extension] of [
@@ -25,4 +25,13 @@ test('the base name is the name without its extension and dot, or the whole name
   assert.equal(baseName('Meeting 10.15'), 'Meeting 10.15');
   assert.equal(baseName('New 01'), 'New 01');
   assert.equal(baseName('.env'), '.env');
+});
+
+test('New names have at least 2 digits (NEW-4)', () => {
+  assert.deepEqual([1, 9, 10, 99, 100].map(newName), ['New 01', 'New 09', 'New 10', 'New 99', 'New 100']);
+});
+
+test('the New name pattern is "New", a space and digits only (NEW-5, NEW-7)', () => {
+  for (const name of ['New 01', 'New 1', 'New 100']) assert.match(name, NEW_NAME);
+  for (const name of ['Untitled 1', 'New01', 'new 01', 'New 01.md', 'New 1a', 'New ']) assert.doesNotMatch(name, NEW_NAME);
 });

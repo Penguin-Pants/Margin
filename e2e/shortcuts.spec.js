@@ -29,7 +29,7 @@ test('Ctrl+N creates a document and is kept from the browser', async ({ page }) 
   await login(page);
   expect(await dispatchMod(page, 'KeyN')).toBe(true);
   await expect(tabs(page)).toHaveCount(1);
-  await expect(page.getByRole('tab', { name: 'Untitled 1' })).toHaveAttribute('aria-selected', 'true');
+  await expect(page.getByRole('tab', { name: 'New 01' })).toHaveAttribute('aria-selected', 'true');
 });
 
 test('Ctrl+W starts the close flow and is kept from the browser', async ({ page }) => {

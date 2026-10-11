@@ -15,8 +15,14 @@ export const CONTENT_LIMIT_BYTES = 1_048_576;
 /** The most characters (Unicode code points) in a document name, after trimming. */
 export const NAME_MAX_LENGTH = 255;
 
-/** A name that New gives (DOC-4, TD-25). Group 1 is N. */
-export const UNTITLED_NAME = /^Untitled (\d+)$/;
+/** A name that New gives (v4 NEW-5, NEW-7): "New", a space and digits. Group 1 is the number. */
+export const NEW_NAME = /^New (\d+)$/;
+
+/**
+ * The name that New gives document number n (v4 NEW-4).
+ * @param {number} n
+ */
+export const newName = (n) => `New ${String(n).padStart(2, '0')}`;
 
 /** The autosave delay until the owner sets one (SAV-2). */
 export const AUTOSAVE_DEFAULT_SECONDS = 5;

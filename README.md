@@ -108,7 +108,7 @@ In a Markdown tab, Ctrl+B (Cmd+B) makes text bold, Ctrl+I (Cmd+I) italic and Ctr
 
 ## Workspaces
 
-- **Personal and Work:** each workspace has its own documents, open tabs and "Untitled N" numbers. Documents from before workspaces are in Personal. There are always exactly these two.
+- **Personal and Work:** each workspace has its own documents, open tabs and "New NN" numbers. Documents from before workspaces are in Personal. There are always exactly these two.
 - **Switch:** the button left of the theme button shows the active workspace. Click it, or press Enter or Space on it, to switch. All text saves first. If a save fails, the workspace stays the same and a message says why. The window title starts with the workspace name, for example "Work - Margin". Each browser opens its last workspace.
 - **Shared by both:** the password, sessions, theme, Visual or Raw mode, the outline panel, the count mode and the autosave delay.
 - **Move:** in the Documents list, "Move to Work" or "Move to Personal" moves a document with its name, text and date. An open tab saves first, then closes.
@@ -132,7 +132,8 @@ The same dialog sets one color per workspace: `#RGB` or `#RRGGBB`, in any letter
 - Two devices editing one document get a conflict warning, not live sync.
 - Save (Ctrl+S) saves the active tab now. Save all saves every open tab of the workspace now and says "All documents saved." or names each document that did not save. Neither asks for a name or downloads a file: use Export for a file. Save all has no shortcut.
 - Rename on a tab (double-click or F2) or in the Documents list. Enter or a click elsewhere keeps the name, Escape cancels. A name without an extension gets `.md`. An extension is the text after the last dot when it is 1 to 10 letters or digits with at least one letter, so `Meeting 10.15` becomes `Meeting 10.15.md`. A rename that changes the extension sets the language back to Auto (detected). The tab text hides the extension; the tooltip shows the full name.
-- New documents are named "Untitled N" and start as Markdown. To change the type, use the language list in the status bar. An empty "Untitled N" tab closes without a prompt and its document is deleted.
+- New documents are named "New 01", "New 02" and so on ("New 100" after "New 99"), and start as Markdown. The number is 1 + the highest "New NN" number in the workspace. To change the type, use the language list in the status bar. An empty "New NN" tab closes without a prompt and its document is deleted. Documents named "Untitled N" by older versions keep their names, and an empty one asks Keep or Delete like any other document.
+- A double-click on the empty part of the tab strip, right of the last tab, creates a new document, like New.
 - Visual mode shows diagrams as images, so diagram text cannot be selected there. The Mermaid ELK layout is not included; diagrams use the dagre layout.
 - In PDF export, `http:` images do not load. `https:` images do.
 - Notion sync is not built yet.

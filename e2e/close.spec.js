@@ -16,7 +16,7 @@ async function documentIds(api) {
 test('Keep saves the text, closes the tab and leaves the document in the list', async ({ page, api }) => {
   await login(page);
   await typedDocument(page, 'keep this');
-  await closeButton(page, 'Untitled 1').click();
+  await closeButton(page, 'New 01').click();
   const dialog = closeDialog(page);
   await expect(dialog).toContainText('permanently');
   await expect(dialog.getByRole('button', { name: 'Keep' })).toBeFocused();
@@ -30,7 +30,7 @@ test('Delete permanently removes the document', async ({ page, api }) => {
   await login(page);
   await typedDocument(page, 'delete this');
   const [id] = await documentIds(api);
-  await closeButton(page, 'Untitled 1').click();
+  await closeButton(page, 'New 01').click();
   await closeDialog(page).getByRole('button', { name: 'Delete permanently' }).click();
   await expect(page.getByRole('tab')).toHaveCount(0);
   await expect.poll(async () => (await api.get(`/api/documents/${id}`)).status()).toBe(404);
@@ -39,22 +39,22 @@ test('Delete permanently removes the document', async ({ page, api }) => {
 test('Cancel and Escape keep the tab open', async ({ page }) => {
   await login(page);
   await typedDocument(page, 'stay open');
-  await closeButton(page, 'Untitled 1').click();
+  await closeButton(page, 'New 01').click();
   await closeDialog(page).getByRole('button', { name: 'Cancel' }).click();
   await expect(page.getByRole('tab')).toHaveCount(1);
-  await closeButton(page, 'Untitled 1').click();
+  await closeButton(page, 'New 01').click();
   await page.keyboard.press('Escape');
   await expect(closeDialog(page)).toHaveCount(0);
   await expect(page.getByRole('tab')).toHaveCount(1);
 });
 
-test('an empty Untitled tab closes with no dialog and leaves no document', async ({ page, api }) => {
+test('an empty New tab closes with no dialog and leaves no document', async ({ page, api }) => {
   await login(page);
   await newDocument(page);
   await typedDocument(page, 'x');
   await page.keyboard.press('Backspace');
-  await closeButton(page, 'Untitled 2').click();
-  await closeButton(page, 'Untitled 1').click();
+  await closeButton(page, 'New 02').click();
+  await closeButton(page, 'New 01').click();
   await expect(page.getByRole('tab')).toHaveCount(0);
   await expect(closeDialog(page)).toHaveCount(0);
   await expect.poll(() => documentIds(api)).toEqual([]);
@@ -77,7 +77,7 @@ test('when the Keep save fails, the tab stays open with status error', async ({ 
   await page.route('**/api/documents/*/content', (route) => route.abort());
   await editor(page).click();
   await page.keyboard.type('cannot save');
-  await closeButton(page, 'Untitled 1').click();
+  await closeButton(page, 'New 01').click();
   await closeDialog(page).getByRole('button', { name: 'Keep' }).click();
   await expect(page.locator('#save-status')).toHaveText('Save failed. Retrying.');
   await expect(page.getByRole('tab')).toHaveCount(1);
