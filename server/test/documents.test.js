@@ -30,30 +30,41 @@ test('the list is empty at first', async () => {
   assert.deepEqual(await list(), []);
 });
 
-test('create without a name gives Untitled 1, then Untitled 2', async () => {
+test('create without a name gives New 01, then New 02 (v4 NEW-4)', async () => {
   const first = await create();
   assert.equal(first.statusCode, 201);
   assert.deepEqual(Object.keys(first.json()).sort(), ['id', 'language', 'name', 'updatedAt', 'version']);
-  assert.equal(first.json().name, 'Untitled 1');
+  assert.equal(first.json().name, 'New 01');
   assert.equal(first.json().version, 1);
   assert.equal(first.json().language, null);
   assert.equal(first.json().updatedAt, now);
   assert.match(first.json().id, /^[0-9a-f-]{36}$/);
-  assert.equal((await create()).json().name, 'Untitled 2');
+  assert.equal((await create()).json().name, 'New 02');
 });
 
-test('Untitled N uses 1 + the highest N, not the count', async () => {
+test('New NN uses 1 + the highest number, not the count, and fills no gap (v4 NEW-5)', async () => {
   const first = (await create()).json();
   await create();
   ctx.db.prepare("UPDATE documents SET name = 'renamed.txt' WHERE id = ?").run(first.id);
-  assert.equal((await create()).json().name, 'Untitled 3');
+  assert.equal((await create()).json().name, 'New 03');
+  await create('', withName('New 07'));
+  assert.equal((await create()).json().name, 'New 08');
 });
 
-test('only names that are exactly "Untitled <digits>" count', async () => {
-  for (const name of ['Untitled 9 notes', 'untitled 7', 'Untitled', 'My Untitled 8']) await create('', withName(name));
-  assert.equal((await create()).json().name, 'Untitled 1');
-  await create('', withName('Untitled 41'));
-  assert.equal((await create()).json().name, 'Untitled 42');
+test('a deleted highest number is given again (v4 EDGE-48)', async () => {
+  for (let n = 1; n <= 5; n += 1) await create();
+  const fifth = (await list()).find((doc) => doc.name === 'New 05');
+  await ctx.app.inject({ method: 'DELETE', url: `/api/documents/${fifth.id}`, headers: { cookie, origin: ORIGIN } });
+  assert.equal((await create()).json().name, 'New 05');
+});
+
+test('only names that are exactly "New <digits>" count, and "Untitled N" does not (v4 NEW-5)', async () => {
+  for (const name of ['New 9 notes', 'new 7', 'New', 'My New 8', 'New 3.md', 'Untitled 3']) await create('', withName(name));
+  assert.equal((await create()).json().name, 'New 01');
+  await create('', withName('New 99'));
+  assert.equal((await create()).json().name, 'New 100');
+  await create('', withName('New 0041'));
+  assert.equal((await create()).json().name, 'New 101');
 });
 
 test('create stores the body and an optional trimmed name', async () => {
@@ -68,7 +79,7 @@ test('create stores the body and an optional trimmed name', async () => {
 test('create stores an optional language and rejects an unknown one', async () => {
   const res = await create('', '?language=markdown');
   assert.equal(res.statusCode, 201);
-  assert.equal(res.json().name, 'Untitled 1');
+  assert.equal(res.json().name, 'New 01');
   assert.equal(res.json().language, 'markdown');
   assert.equal((await get(res.json().id)).json().language, 'markdown');
   assert.equal((await create('', `${withName('a.txt')}&language=python`)).json().language, 'python');

@@ -1,7 +1,7 @@
 // Document storage (BUILD_PLAN.md section 2.6). Every query names the
 // workspace (v3 TD-24): a document of the other workspace reads as missing.
 import { randomUUID } from 'node:crypto';
-import { NAME_MAX_LENGTH, UNTITLED_NAME } from '../../../shared/contract.js';
+import { extensionOf, NAME_MAX_LENGTH, NEW_NAME, newName } from '../../../shared/contract.js';
 import { transaction } from '../db.js';
 
 // node:sqlite (seen in Node 24.13) cuts a bound TEXT value at its first NUL
@@ -42,6 +42,19 @@ export function normalizeName(value) {
 }
 
 /**
+ * The stored name of a rename (v4 REN-5, REN-7), or null when it breaks the
+ * name rule: trimmed, trailing dots removed, then `.md` appended when it has
+ * no extension (EXT-1). The limit counts the appended `.md`.
+ * @param {unknown} value
+ */
+export function renamedName(value) {
+  if (typeof value !== 'string') return null;
+  const name = value.trim().replace(/[.\s]+$/u, '');
+  if (name === '') return null;
+  return normalizeName(extensionOf(name) ? name : `${name}.md`);
+}
+
+/**
  * Newest first. No content.
  * @param {import('node:sqlite').DatabaseSync} db
  * @param {string} workspace
@@ -64,7 +77,7 @@ export function listDocuments(db, workspace) {
 export function createDocument(db, { workspace, name, content, language = null, now }) {
   return transaction(db, () => {
     const id = randomUUID();
-    const finalName = name ?? nextUntitledName(db, workspace);
+    const finalName = name ?? nextNewName(db, workspace);
     db.prepare(
       'INSERT INTO documents (id, workspace, name, content, language, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
     ).run(id, workspace, finalName, encodeContent(content), language, now, now);
@@ -72,16 +85,17 @@ export function createDocument(db, { workspace, name, content, language = null, 
   });
 }
 
-// N = 1 + the highest N among names "Untitled N" in the workspace (TD-25).
-// Runs inside the insert transaction.
-function nextUntitledName(db, workspace) {
+// The number is 1 + the highest number among names "New NN" in the
+// workspace (v4 NEW-5, TD-25). "Untitled N" names do not count. Runs inside
+// the insert transaction.
+function nextNewName(db, workspace) {
   let highest = 0;
-  const rows = db.prepare("SELECT name FROM documents WHERE workspace = ? AND name LIKE 'Untitled %'").all(workspace);
+  const rows = db.prepare("SELECT name FROM documents WHERE workspace = ? AND name LIKE 'New %'").all(workspace);
   for (const { name } of rows) {
-    const n = Number(UNTITLED_NAME.exec(name)?.[1]);
+    const n = Number(NEW_NAME.exec(name)?.[1]);
     if (Number.isSafeInteger(n) && n > highest) highest = n;
   }
-  return `Untitled ${highest + 1}`;
+  return newName(highest + 1);
 }
 
 /**
@@ -118,17 +132,23 @@ export function saveContent(db, { workspace, id, content, expectedVersion, now }
 /**
  * Applies a rename, a language override and/or a move to the other
  * workspace. Only a rename changes updated_at (section 2.6), so a move keeps
- * the sort position (v3 TD-26). None changes version (TD-6).
+ * the sort position (v3 TD-26). None changes version (TD-6). A rename that
+ * changes the extension (letter case ignored) and sends no language sets the
+ * language to Auto in the same transaction (v4 REN-8, REN-9).
  * @param {import('node:sqlite').DatabaseSync} db
  * @param {string} workspace The document's workspace now.
  * @param {string} id
  * @param {{ name?: string, language?: string | null, workspace?: string }} changes Already validated.
+ *   The name comes from renamedName.
  * @param {number} now
  * @returns {DocumentMeta | undefined} undefined when the document does not exist in the workspace.
  */
 export function updateMeta(db, workspace, id, { name, language, workspace: target }, now) {
   return transaction(db, () => {
-    if (!db.prepare('SELECT 1 FROM documents WHERE id = ? AND workspace = ?').get(id, workspace)) return undefined;
+    const current = db.prepare('SELECT name FROM documents WHERE id = ? AND workspace = ?').get(id, workspace);
+    if (!current) return undefined;
+    const sameExtension = (a, b) => extensionOf(a).toLowerCase() === extensionOf(b).toLowerCase();
+    if (name !== undefined && language === undefined && !sameExtension(current.name, name)) language = null;
     if (name !== undefined) db.prepare('UPDATE documents SET name = ?, updated_at = ? WHERE id = ?').run(name, now, id);
     if (language !== undefined) db.prepare('UPDATE documents SET language = ? WHERE id = ?').run(language, id);
     if (target !== undefined) db.prepare('UPDATE documents SET workspace = ? WHERE id = ?').run(target, id);

@@ -3,7 +3,7 @@
 // `workspace` query value names, Personal by default (v3 TD-23).
 import { CONTENT_LIMIT_BYTES, LANGUAGE_IDS, WORKSPACES } from '../../../shared/contract.js';
 import { parseWorkspace } from '../workspaces.js';
-import { createDocument, deleteDocument, getDocument, listDocuments, normalizeName, saveContent, updateMeta } from './repo.js';
+import { createDocument, deleteDocument, getDocument, listDocuments, normalizeName, renamedName, saveContent, updateMeta } from './repo.js';
 
 /**
  * @param {import('fastify').FastifyInstance} app
@@ -67,7 +67,8 @@ export async function documentRoutes(app, { db, clock }) {
     }
     const changes = {};
     if (Object.hasOwn(body, 'name')) {
-      changes.name = normalizeName(body.name);
+      // v4 REN-5: the stored name can differ from the sent one.
+      changes.name = renamedName(body.name);
       if (changes.name === null) return reply.code(400).send({ error: 'invalid_name' });
     }
     if (Object.hasOwn(body, 'language')) {

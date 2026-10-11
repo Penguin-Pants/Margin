@@ -1,8 +1,8 @@
 # Margin v4 Tab Rename, Save Buttons and New Documents: Requirements
 
-**Status:** Decision-complete. Open questions: none. Not built.
+**Status:** Decision-complete. Open questions: none. Built: M22 to M24 (PR #16). Owner checks are open (section 9).
 **Date:** 2026-10-11
-**Purpose:** Single source of truth for v4. No build plan exists yet. This file does not include an implementation.
+**Purpose:** Single source of truth for v4. Section 9 serves as the build plan (no `BUILD_PLAN_V4.md`). This file does not include an implementation.
 **Location:** `docs/planning/REQUIREMENTS_V4.md`
 **Builds on:** `docs/planning/REQUIREMENTS.md` (v1), `docs/planning/REQUIREMENTS_V2.md` (v2) and `docs/planning/REQUIREMENTS_V3.md` (v3). Their requirements stay in force unless section 10 says otherwise.
 
@@ -190,13 +190,13 @@ Numbering continues from v3 (EDGE-28 to EDGE-34).
 
 ## 9. Build sequence and status
 
-No build plan exists yet. The next step is `docs/planning/BUILD_PLAN_V4.md` with tasks and the two-pass review in `docs/planning/PLAN_REVIEW.md` section 1.
+No `BUILD_PLAN_V4.md` exists. The build uses this sequence as the plan, as v2 did (`PLAN_REVIEW.md` section 9, row of 2026-10-11, pending owner approval). Each phase ends with a two-pass review (`PLAN_REVIEW.md` section 1), logged in `PLAN_REVIEW.md` section 16. Deviations go to `PLAN_REVIEW.md` section 9.
 
 | Milestone | Work | Covers | Status |
 |-----------|------|--------|--------|
-| M22 | Extension rule and tab rename | EXT-1 to EXT-3, REN-1 to REN-12, EDGE-35 to EDGE-42 | Not started |
-| M23 | Save buttons | SVB-1 to SVB-5, EDGE-43 to EDGE-45 | Not started |
-| M24 | New document names and tab strip double-click | NEW-3 to NEW-7, EDGE-46 to EDGE-48 | Not started |
+| M22 | Extension rule and tab rename | EXT-1 to EXT-3, REN-1 to REN-12, EDGE-35 to EDGE-42 | Done (PR #16). Owner check: the name field with a screen reader, and in Firefox and Safari (`PLAN_REVIEW.md` section 16, M22 row 1). |
+| M23 | Save buttons | SVB-1 to SVB-5, EDGE-43 to EDGE-45 | Done (PR #16) |
+| M24 | New document names and tab strip double-click | NEW-3 to NEW-7, EDGE-46 to EDGE-48 | Done (PR #16) |
 
 ### Definition of done
 

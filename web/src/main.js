@@ -9,7 +9,7 @@ import { createDocList } from './doclist.js';
 import { openDropped, setupDrop } from './drop.js';
 import { createDropdown } from './dropdown.js';
 import { createEditor } from './editor.js';
-import { emit, on } from './events.js';
+import { emit } from './events.js';
 import { download, exportContent, exportFormats, fullTree, printPage } from './export.js';
 import { LANGUAGES } from './languages.js';
 import { loginErrorText } from './login-errors.js';
@@ -27,7 +27,7 @@ import { createTabs } from './tabs.js';
 import { animateThemeSwitch, createTheme } from './theme.js';
 import { otherWorkspace, showWorkspace, WORKSPACE, WORKSPACE_NAMES } from './workspace.js';
 import { textColorOn } from './workspace-color.js';
-import { createExclusive, switchWorkspace } from './workspace-switch.js';
+import { createExclusive, saveAll, switchWorkspace } from './workspace-switch.js';
 
 const $ = (id) => /** @type {HTMLElement} */ (document.getElementById(id));
 
@@ -239,6 +239,9 @@ tabs = createTabs({
     renderLanguage();
     renderMarkdownUi();
     exportWrap.hidden = !tabs.active();
+    // Save and Save all show with a tab, like Export (v4 SVB-2).
+    $('save').hidden = !tabs.active();
+    $('save-all').hidden = !tabs.active();
     // The tab paints first; outline and counts follow 100 ms later. Those of
     // another document go at once, so they never show for the wrong text.
     if (!tabs.shownId() || editor.view.state.doc !== describedDoc) clearSummary();
@@ -505,9 +508,6 @@ setupDrop({
 // CON-1 and EDGE-1: a 412 or 404 save opens a dialog with the choices.
 setupConflictHandling({ api, autosave, tabs });
 
-// A rename can change the language when no override is set.
-on('doc-renamed', ({ id, name }) => tabs.rename(id, name));
-
 setupSessionRecovery({
   onSignedIn: () => {
     loadSettings();
@@ -539,6 +539,35 @@ $('empty-new').addEventListener('click', () => tabs.newDocument());
 $('empty-list').addEventListener('click', () => doclist.show());
 $('find').addEventListener('click', () => tabs.shownId() && openFind(editor.view));
 
+// Save now (EDT-7, SAV-5, v4 SVB-3). A name edit commits first (v4 REN-4).
+// A failed rename keeps its message, and nothing saves. The save status
+// label shows the result. After a mouse click on a button, the focus goes
+// back to the editor, as Ctrl+S keeps it there (like the Visual toggle).
+async function saveActive({ refocus = false } = {}) {
+  if (!(await tabs.commitEdit())) return;
+  const id = tabs.shownId();
+  if (!id) return;
+  if (refocus) editor.focus();
+  autosave.flush(id);
+}
+
+// Save all (v4 SVB-4): every open tab of the workspace saves now. A tab that
+// closes meanwhile counts as saved (EDGE-45). A conflict or a delete also
+// opens its dialog (EDGE-43). It never runs during a switch, a drop or a
+// move, so their messages stay.
+async function saveAllNow({ refocus = false } = {}) {
+  if (!(await tabs.commitEdit())) return;
+  if (refocus && tabs.shownId()) editor.focus();
+  await exclusive('save all', async () => {
+    const result = await saveAll(autosave);
+    if (result.ok) showMessage('All documents saved.');
+    else showMessage(`Not saved: ${result.unsaved.map((id) => tabs.get(id)?.name ?? id).join(', ')}.`);
+  });
+}
+// detail is 0 for a click from the keyboard, which keeps the focus (SVB-5).
+$('save').addEventListener('click', (event) => saveActive({ refocus: event.detail > 0 }));
+$('save-all').addEventListener('click', (event) => saveAllNow({ refocus: event.detail > 0 }));
+
 // Shortcuts (EDT-7, EDT-9). Ctrl+N and Ctrl+W reach the page only in the
 // installed app window. Alt+N and Alt+W work everywhere.
 setupShortcuts({
@@ -547,15 +576,13 @@ setupShortcuts({
     const tab = tabs.active();
     if (tab) tabs.close(tab.id);
   },
-  save: () => {
-    const id = tabs.shownId();
-    if (id) autosave.flush(id);
-  },
+  save: () => saveActive(),
   find: () => tabs.shownId() && openFind(editor.view),
   replace: () => tabs.shownId() && openReplace(editor.view),
 });
 $('new-doc').title = `New document (${modName()}+N in the installed app, Alt+N)`;
 $('find').title = `Find (${modName()}+F) and replace (${modName()}+H)`;
+$('save').title = `Save now (${modName()}+S)`;
 // TD-15: clean tabs and the open document list refresh on window focus.
 window.addEventListener('focus', () => {
   tabs.refresh();

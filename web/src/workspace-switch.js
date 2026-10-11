@@ -34,11 +34,12 @@ export function createExclusive(showMessage) {
 }
 
 /**
- * @typedef {{ ok: true } | { ok: false, reason: 'conflict' | 'network' | 'session' | 'too-large' | 'changing' }} SaveAllResult
+ * @typedef {{ ok: true } | { ok: false, reason: 'conflict' | 'network' | 'session' | 'too-large' | 'changing', unsaved: string[] }} SaveAllResult
+ *   unsaved: the ids of the documents that are not saved (v4 SVB-4).
  */
 
 /**
- * Saves every tracked document. Repeats while text is still unsaved and the
+ * Saves every tracked document (the switch, and Save all in v4 SVB-4). Repeats while text is still unsaved and the
  * last round saved (text typed during a round), at most 3 rounds.
  * @param {Pick<ReturnType<typeof import('./autosave.js').createAutosave>, 'ids' | 'flush' | 'hasUnsaved' | 'status' | 'reason'>} autosave
  * @returns {Promise<SaveAllResult>} ok only when nothing is unsaved.
@@ -47,10 +48,12 @@ export async function saveAll(autosave) {
   for (let round = 0; round < ROUNDS; round += 1) {
     const results = await Promise.all(autosave.ids().map((id) => autosave.flush(id)));
     if (!autosave.hasUnsaved()) return { ok: true };
-    if (results.includes(false)) return { ok: false, reason: failureReason(autosave) };
+    if (results.includes(false)) return { ok: false, reason: failureReason(autosave), unsaved: unsavedIds(autosave) };
   }
-  return { ok: false, reason: 'changing' };
+  return { ok: false, reason: 'changing', unsaved: unsavedIds(autosave) };
 }
+
+const unsavedIds = (autosave) => autosave.ids().filter((id) => autosave.status(id) !== 'saved');
 
 // A conflict or a delete has its own dialog (CON-1, EDGE-1). A 401 pauses a
 // document as unsaved with no reason, and the sign-in dialog opens (EDGE-4).

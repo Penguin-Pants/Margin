@@ -330,6 +330,11 @@ button.danger {
   display: flex;
   align-items: center;
   gap: 4px;
+  /* The tab text hides the extension (v4 REN-11). A short name still gets
+     a name area wider than the close mark. Tabs do not shrink: the strip
+     scrolls (LAY-1). */
+  flex: none;
+  min-width: 80px;
   max-width: 220px;
   padding: 0 4px 0 12px;
   border-right: 1px solid var(--border);
@@ -345,9 +350,23 @@ button.danger {
 }
 
 .tab-name {
+  flex-grow: 1;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* The name field of a rename on the tab (v4 REN-1). The tab class wins
+   over the input[type="text"] style of the dialogs. */
+.tab .tab-name-input {
+  width: 18ch;
+  min-width: 0;
+  padding: 1px 4px;
+  background: var(--bg);
+  color: var(--fg);
+  border: 1px solid var(--accent);
+  border-radius: 3px;
+  user-select: text;
 }
 
 .tab-dirty {

@@ -68,11 +68,11 @@ test('each list holds only the documents of its workspace', async () => {
   assert.deepEqual(await names('work'), ['plan.md']);
 });
 
-test('"Untitled N" counts only the names of the target workspace', async () => {
-  assert.equal((await create('personal')).name, 'Untitled 1');
-  assert.equal((await create('work')).name, 'Untitled 1');
-  assert.equal((await create('personal')).name, 'Untitled 2');
-  assert.equal((await create('work')).name, 'Untitled 2');
+test('"New NN" counts only the names of the target workspace (v4 NEW-5)', async () => {
+  assert.equal((await create('personal')).name, 'New 01');
+  assert.equal((await create('work')).name, 'New 01');
+  assert.equal((await create('personal')).name, 'New 02');
+  assert.equal((await create('work')).name, 'New 02');
 });
 
 test('a request without a workspace acts on Personal, as a page from before v3 sends it (MIG-3)', async () => {

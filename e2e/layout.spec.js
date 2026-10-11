@@ -208,7 +208,7 @@ test('in a narrow window every top-bar control, status-bar control and the Docum
   await page.setViewportSize({ width: 480, height: 700 });
   await openDocs(page, api, [['notes.md', '# Notes']]);
   await expect(page.getByRole('button', { name: 'Visual' })).toBeVisible();
-  for (const name of ['New', 'Outline', 'Documents', 'Export', 'Find', 'Visual', 'Light theme', 'Account']) {
+  for (const name of ['New', 'Outline', 'Documents', 'Export', 'Find', 'Visual', 'Save', 'Save all', 'Light theme', 'Account']) {
     const box = await page.getByRole('button', { name, exact: true }).boundingBox();
     expect(box.x + box.width, name).toBeLessThanOrEqual(480);
   }

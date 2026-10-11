@@ -2,10 +2,8 @@
 // last modified date, newest first, of the active workspace (v3 WS-6). Open,
 // rename, move to the other workspace (MOV-1) and delete. Open closes the
 // dropdown. Delete is permanent and closes the tab.
-import { NAME_MAX_LENGTH } from '../../shared/contract.js';
 import { choose, formDialog } from './dialogs.js';
 import { createDropdown } from './dropdown.js';
-import { emit } from './events.js';
 import { otherWorkspace, WORKSPACE_NAMES } from './workspace.js';
 
 /**
@@ -102,22 +100,13 @@ export function createDocList({ api, tabs, autosave, exclusive, root, button, pa
     }
   }
 
+  // The same rules as a rename on the tab (v4 REN-10).
   async function renameDocument(doc, workspace) {
     const result = await formDialog({
       title: 'Rename document',
       fields: [{ name: 'name', label: 'Name', value: doc.name }],
       submitLabel: 'Rename',
-      onSubmit: async ({ name }) => {
-        const { status, data } = await api.updateDocument(doc.id, { name }, workspace);
-        if (status === 200) {
-          emit('doc-renamed', { id: doc.id, name: data.name });
-          return null;
-        }
-        if (data?.error === 'invalid_name') return `Use 1 to ${NAME_MAX_LENGTH} characters and no control characters.`;
-        if (status === 404) return 'This document no longer exists.';
-        if (status === 0) return 'Cannot connect to the server. Try again.';
-        return 'Rename failed. Try again.';
-      },
+      onSubmit: ({ name }) => tabs.renameDocument(doc.id, name, { current: doc.name, workspace }),
     });
     if (result === null) return;
     await refresh();

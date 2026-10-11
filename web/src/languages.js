@@ -15,7 +15,7 @@ import { shell } from '@codemirror/legacy-modes/mode/shell';
 import { Facet, Prec } from '@codemirror/state';
 import { EditorView, keymap } from '@codemirror/view';
 import { GFM } from '@lezer/markdown';
-import { LANGUAGE_IDS } from '../../shared/contract.js';
+import { extensionOf, LANGUAGE_IDS } from '../../shared/contract.js';
 import { markdownKeymap } from './markdown-commands.js';
 
 const LABELS = {
@@ -97,14 +97,8 @@ const PARSERS = {
 };
 
 /**
- * The last name extension as written, without the dot, or ''.
- * @param {string | null | undefined} name
- */
-export const extensionOf = (name) => /\.([^./]+)$/.exec(name ?? '')?.[1] ?? '';
-
-/**
- * Language id from the last name extension, case-insensitive. Unknown or
- * missing extensions give 'plain' (EDGE-9).
+ * Language id from the name extension (v4 EXT-1), case-insensitive. Unknown
+ * or missing extensions give 'plain' (EDGE-9).
  * @param {string} name
  */
 export function detectLanguage(name) {

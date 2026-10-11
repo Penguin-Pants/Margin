@@ -7,7 +7,7 @@ test('with no stored tabs the empty state offers New document', async ({ page })
   await login(page);
   await expect(page.getByText('No document is open.')).toBeVisible();
   await page.getByRole('button', { name: 'New document' }).click();
-  await expect(tab(page, 'Untitled 1')).toHaveAttribute('aria-selected', 'true');
+  await expect(tab(page, 'New 01')).toHaveAttribute('aria-selected', 'true');
   await expect(page.getByText('No document is open.')).toBeHidden();
 });
 
@@ -72,7 +72,7 @@ test('a keyboard-only run moves between tabs, opens one and closes one (audit C4
   await expect(tab(page, 'b.txt')).toBeFocused();
   await page.keyboard.press('Delete');
   await page.keyboard.press('Enter'); // Keep, the default choice.
-  await expect(page.getByRole('tab')).toHaveText([/^a\.txt/, /^c\.txt/]);
+  await expect.poll(() => page.getByRole('tab').evaluateAll((tabs) => tabs.map((tab) => tab.getAttribute('aria-label')))).toEqual(['a.txt', 'c.txt']);
 });
 
 test('three tabs keep separate content and undo history', async ({ page }) => {
@@ -82,17 +82,17 @@ test('three tabs keep separate content and undo history', async ({ page }) => {
     await editor(page).click();
     await page.keyboard.type(text);
   }
-  await tab(page, 'Untitled 1').click();
+  await tab(page, 'New 01').click();
   await expect(editor(page)).toHaveText('alpha');
   await page.keyboard.press('ControlOrMeta+z');
   await expect(editor(page)).toHaveText('');
-  await tab(page, 'Untitled 2').click();
+  await tab(page, 'New 02').click();
   await expect(editor(page)).toHaveText('beta');
   await page.keyboard.press('ControlOrMeta+z');
   await expect(editor(page)).toHaveText('');
-  await tab(page, 'Untitled 3').click();
+  await tab(page, 'New 03').click();
   await expect(editor(page)).toHaveText('gamma');
-  await tab(page, 'Untitled 1').click();
+  await tab(page, 'New 01').click();
   await page.keyboard.press(process.platform === 'darwin' ? 'Meta+Shift+z' : 'Control+y');
   await expect(editor(page)).toHaveText('alpha');
 });
@@ -104,15 +104,15 @@ test('a reload restores the open tabs and the active tab', { tag: '@smoke' }, as
     await editor(page).click();
     await page.keyboard.type(text);
   }
-  await tab(page, 'Untitled 2').click();
+  await tab(page, 'New 02').click();
   await expect(page.locator('.tab.dirty')).toHaveCount(0);
   await page.reload();
-  await expect(page.getByRole('tab')).toHaveText(['Untitled 1', 'Untitled 2', 'Untitled 3'].map((n) => new RegExp(n)));
-  await expect(tab(page, 'Untitled 2')).toHaveAttribute('aria-selected', 'true');
+  await expect(page.getByRole('tab')).toHaveText(['New 01', 'New 02', 'New 03'].map((n) => new RegExp(n)));
+  await expect(tab(page, 'New 02')).toHaveAttribute('aria-selected', 'true');
   await expect(editor(page)).toHaveText('two');
-  await tab(page, 'Untitled 1').click();
+  await tab(page, 'New 01').click();
   await expect(editor(page)).toHaveText('one');
-  await tab(page, 'Untitled 3').click();
+  await tab(page, 'New 03').click();
   await expect(editor(page)).toHaveText('three');
 });
 
@@ -122,10 +122,10 @@ test('clicking the active tab keeps the typed text', async ({ page, api }) => {
   await editor(page).click();
   await page.keyboard.type('hello');
   await expect(page.locator('#save-status')).toHaveText('Saved');
-  await tab(page, 'Untitled 1').click();
+  await tab(page, 'New 01').click();
   await expect(editor(page)).toHaveText('hello');
   await page.keyboard.type(' again');
-  await tab(page, 'Untitled 1').click();
+  await tab(page, 'New 01').click();
   await expect(editor(page)).toHaveText('hello again');
   await expect(page.locator('#save-status')).toHaveText('Saved');
   const [doc] = await (await api.get('/api/documents')).json();
@@ -164,11 +164,11 @@ test('a document deleted elsewhere is dropped from the restored tabs', async ({ 
   await newDocument(page);
   await newDocument(page);
   const docs = await (await api.get('/api/documents')).json();
-  const first = docs.find((doc) => doc.name === 'Untitled 1');
+  const first = docs.find((doc) => doc.name === 'New 01');
   expect((await api.delete(`/api/documents/${first.id}`)).status()).toBe(204);
   await page.reload();
   await expect(page.getByRole('tab')).toHaveCount(1);
-  await expect(tab(page, 'Untitled 2')).toBeVisible();
+  await expect(tab(page, 'New 02')).toBeVisible();
 });
 
 test('closing a tab saves it first and keeps the document', async ({ page, api }) => {
@@ -176,7 +176,7 @@ test('closing a tab saves it first and keeps the document', async ({ page, api }
   await newDocument(page);
   await editor(page).click();
   await page.keyboard.type('keep me');
-  await closeButton(page, 'Untitled 1').click();
+  await closeButton(page, 'New 01').click();
   await page.getByRole('dialog', { name: 'Close document' }).getByRole('button', { name: 'Keep' }).click();
   await expect(page.getByRole('tab')).toHaveCount(0);
   await expect(page.getByText('No document is open.')).toBeVisible();

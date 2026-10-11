@@ -83,14 +83,14 @@ test('Save mine as a new document creates a conflict copy and reloads the origin
   const id = await savedDocument(page, api, 'mine');
   await editUntilConflict(page, api, id);
   await conflictDialog(page).getByRole('button', { name: 'Save mine as a new document' }).click();
-  const copyTab = page.getByRole('tab', { name: 'Untitled 1 (conflict copy)' });
+  const copyTab = page.getByRole('tab', { name: 'New 01 (conflict copy)' });
   await expect(copyTab).toHaveAttribute('aria-selected', 'true');
   await expect(editor(page)).toHaveText('mine more');
   await expect(editor(page)).toHaveAttribute('data-language', 'markdown');
-  const copy = (await (await api.get('/api/documents')).json()).find((doc) => doc.name === 'Untitled 1 (conflict copy)');
+  const copy = (await (await api.get('/api/documents')).json()).find((doc) => doc.name === 'New 01 (conflict copy)');
   expect((await serverDoc(api, copy.id)).content).toBe('mine more');
   expect(copy.language).toBe('markdown');
-  await page.getByRole('tab', { name: 'Untitled 1', exact: true }).click();
+  await page.getByRole('tab', { name: 'New 01', exact: true }).click();
   await expect(editor(page)).toHaveText('theirs');
   await expect(status(page)).toHaveText('Saved');
 });
@@ -118,11 +118,11 @@ test('after a delete elsewhere, Save mine as a new document keeps my text', asyn
   await expect(status(page)).toHaveText('Not saved: deleted on another device.');
   await deletedDialog(page).getByRole('button', { name: 'Save mine as a new document' }).click();
   await expect(page.getByRole('tab')).toHaveCount(1);
-  await expect(page.getByRole('tab', { name: 'Untitled 1' })).toHaveAttribute('aria-selected', 'true');
+  await expect(page.getByRole('tab', { name: 'New 01' })).toHaveAttribute('aria-selected', 'true');
   await expect(editor(page)).toHaveText('mine more');
   await expect(editor(page)).toHaveAttribute('data-language', 'markdown');
   const docs = await (await api.get('/api/documents')).json();
-  expect(docs.map((doc) => doc.name)).toEqual(['Untitled 1']);
+  expect(docs.map((doc) => doc.name)).toEqual(['New 01']);
   expect(docs[0].language).toBe('markdown');
   expect((await serverDoc(api, docs[0].id)).content).toBe('mine more');
 });
@@ -153,10 +153,10 @@ test('a failed step inside a choice shows an error in the dialog and keeps my te
   await expect(editor(page)).toHaveText('mine more');
   await dialog.getByRole('button', { name: 'Save mine as a new document' }).click();
   await expect(dialog).toBeHidden();
-  await expect(page.getByRole('tab', { name: 'Untitled 1 (conflict copy)' })).toHaveAttribute('aria-selected', 'true');
+  await expect(page.getByRole('tab', { name: 'New 01 (conflict copy)' })).toHaveAttribute('aria-selected', 'true');
   await expect(editor(page)).toHaveText('mine more');
   const names = (await (await api.get('/api/documents')).json()).map((doc) => doc.name).sort();
-  expect(names).toEqual(['Untitled 1', 'Untitled 1 (conflict copy)']);
+  expect(names).toEqual(['New 01', 'New 01 (conflict copy)']);
 });
 
 test('an expired session inside a choice asks for sign-in, then the choice works', async ({ page, context, api }) => {
@@ -186,10 +186,10 @@ test('two conflicts show one dialog after the other', async ({ page, api }) => {
   await expect(status(page)).toHaveText('Saved');
   const docs = await (await api.get('/api/documents')).json();
   const second = docs.find((doc) => doc.id !== first).id;
-  await page.getByRole('tab', { name: 'Untitled 1' }).click();
+  await page.getByRole('tab', { name: 'New 01' }).click();
   await editor(page).press('ControlOrMeta+End');
   await page.keyboard.type(' a');
-  await page.getByRole('tab', { name: 'Untitled 2' }).click();
+  await page.getByRole('tab', { name: 'New 02' }).click();
   await editor(page).press('ControlOrMeta+End');
   await page.keyboard.type(' b');
   await saveElsewhere(api, first, 'theirs one');
@@ -200,8 +200,8 @@ test('two conflicts show one dialog after the other', async ({ page, api }) => {
   await expect(dialog).toHaveCount(1);
   await dialog.getByRole('button', { name: 'Load the other version' }).click();
   await expect(dialog).toHaveCount(0);
-  await page.getByRole('tab', { name: 'Untitled 1' }).click();
+  await page.getByRole('tab', { name: 'New 01' }).click();
   await expect(editor(page)).toHaveText('theirs one');
-  await page.getByRole('tab', { name: 'Untitled 2' }).click();
+  await page.getByRole('tab', { name: 'New 02' }).click();
   await expect(editor(page)).toHaveText('theirs two');
 });

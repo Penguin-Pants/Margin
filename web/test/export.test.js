@@ -25,6 +25,12 @@ test('Markdown offers md, txt, html and pdf, other types their original source a
   assert.deepEqual(exportFormats('Data.JSON', 'json')[0], { id: 'source', label: 'Original (.JSON)' });
 });
 
+test('export reads the extension by the v4 rule, so an odd name offers no original (EXT-3)', () => {
+  assert.deepEqual(exportFormats('Meeting 10.15', 'plain'), [{ id: 'txt', label: 'Plain text (.txt)' }]);
+  assert.equal(exportFileName('Meeting 10.15', 'txt'), 'Meeting 10.15.txt');
+  assert.deepEqual(exportFormats('archive.7z', 'plain')[0], { id: 'source', label: 'Original (.7z)' });
+});
+
 test('the file name replaces or adds the extension and replaces invalid characters (EXP-6)', () => {
   assert.equal(exportFileName('notes.md', 'html'), 'notes.html');
   assert.equal(exportFileName('notes', 'md'), 'notes.md');

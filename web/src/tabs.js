@@ -2,7 +2,7 @@
 // localStorage (v3 TD-31). Content loads on first activation. Clean tabs
 // refresh from the server on window focus and on tab activation (TD-15).
 
-import { UNTITLED_NAME } from '../../shared/contract.js';
+import { baseName, NAME_MAX_LENGTH, NEW_NAME } from '../../shared/contract.js';
 import { choose } from './dialogs.js';
 import { languageSupport, resolveLanguage } from './languages.js';
 import { modName } from './shortcuts.js';
@@ -70,6 +70,7 @@ export function planRefresh(tabs, list) {
  * @typedef {object} Tab
  * @property {string} id
  * @property {string} name
+ * @property {boolean} named False while the name is unknown ("Loading").
  * @property {string | null} language Manual override, null = auto.
  * @property {import('@codemirror/state').EditorState | null} state Null until loaded.
  * @property {string} [appliedLanguage] The language id the state's parser uses.
@@ -94,6 +95,10 @@ export function createTabs({ editor, autosave, api, getStorage, elements, onActi
   // while a tab's content loads.
   /** @type {string | null} */
   let shownId = null;
+  // The open name edit on a tab (v4 REN-1): the tab, its field and the
+  // rename request in flight.
+  /** @type {{ id: string, input: HTMLInputElement, commit: Promise<boolean> | null } | null} */
+  let edit = null;
 
   const find = (id) => tabs.find((tab) => tab.id === id);
   const isClean = (tab) => tab.state === null || autosave.status(tab.id) === 'saved';
@@ -138,46 +143,128 @@ export function createTabs({ editor, autosave, api, getStorage, elements, onActi
   // The ARIA tabs pattern with manual activation (audit C4). The tab list is
   // one Tab stop, on the selected tab. The close mark is for the mouse only:
   // a tab's content is presentational, so a button in it would be an
-  // unnamed Tab stop. The keyboard closes a tab with Delete.
+  // unnamed Tab stop. The keyboard closes a tab with Delete. The name field
+  // of a rename is in the tab only while it has the focus. Chromium exposes
+  // it as a named text box there (PLAN_REVIEW.md section 16, M22 row 1).
+  function tabElement(tab) {
+    const node = document.createElement('div');
+    node.className = 'tab';
+    node.setAttribute('role', 'tab');
+    node.setAttribute('aria-keyshortcuts', 'Delete F2');
+    node.dataset.id = tab.id;
+    const name = document.createElement('span');
+    name.className = 'tab-name';
+    const dot = document.createElement('span');
+    dot.className = 'tab-dirty';
+    const close = document.createElement('span');
+    close.className = 'tab-close';
+    close.setAttribute('aria-hidden', 'true');
+    close.textContent = '×';
+    close.title = `Close (${modName()}+W in the installed app, Alt+W or Delete on the tab)`;
+    close.addEventListener('click', (event) => {
+      event.stopPropagation();
+      controller.close(tab.id);
+    });
+    node.addEventListener('click', () => controller.activate(tab.id));
+    node.addEventListener('dblclick', (event) => {
+      if (!(/** @type {HTMLElement} */ (event.target).closest('.tab-close'))) controller.startRename(tab.id);
+    });
+    node.append(name, dot, close);
+    return node;
+  }
+
+  // The tab text hides the extension. The tooltip and the accessible name
+  // keep the full name (v4 REN-11).
+  function decorate(node, tab, stop) {
+    node.setAttribute('aria-label', tab.name);
+    node.title = tab.name;
+    node.tabIndex = tab.id === stop ? 0 : -1;
+    node.setAttribute('aria-selected', String(tab.id === activeId));
+    node.classList.toggle('dirty', !isClean(tab));
+    const name = node.querySelector('.tab-name');
+    if (name) name.textContent = baseName(tab.name);
+    return node;
+  }
+
+  // Each tab keeps its node, so a focused tab, a name field (v4 EDGE-35) and
+  // the second click of a double-click stay on the same node.
   function render() {
-    const focused = elements.strip.contains(document.activeElement) ? document.activeElement.dataset.id : undefined;
     const stop = find(activeId)?.id ?? tabs[0]?.id;
-    elements.strip.replaceChildren(
-      ...tabs.map((tab) => {
-        const node = document.createElement('div');
-        node.className = 'tab';
-        node.setAttribute('role', 'tab');
-        node.setAttribute('aria-label', tab.name);
-        node.setAttribute('aria-keyshortcuts', 'Delete');
-        node.tabIndex = tab.id === stop ? 0 : -1;
-        node.dataset.id = tab.id;
-        node.setAttribute('aria-selected', String(tab.id === activeId));
-        if (!isClean(tab)) node.classList.add('dirty');
-        node.title = tab.name;
-        const name = document.createElement('span');
-        name.className = 'tab-name';
-        name.textContent = tab.name;
-        const dot = document.createElement('span');
-        dot.className = 'tab-dirty';
-        const close = document.createElement('span');
-        close.className = 'tab-close';
-        close.setAttribute('aria-hidden', 'true');
-        close.textContent = '×';
-        close.title = `Close (${modName()}+W in the installed app, Alt+W or Delete on the tab)`;
-        close.addEventListener('click', (event) => {
-          event.stopPropagation();
-          controller.close(tab.id);
-        });
-        node.addEventListener('click', () => controller.activate(tab.id));
-        node.append(name, dot, close);
-        return node;
-      }),
-    );
-    // New nodes replace the old ones, so a focused tab gets the focus back.
-    if (focused) tabNode(focused)?.focus();
+    const nodes = tabs.map((tab) => decorate(tabNode(tab.id) ?? tabElement(tab), tab, stop));
+    for (const child of [...elements.strip.children]) if (!nodes.includes(child)) child.remove();
+    // Tabs never change their order, so only new nodes are inserted.
+    nodes.forEach((node, index) => {
+      if (elements.strip.children[index] !== node) elements.strip.insertBefore(node, elements.strip.children[index] ?? null);
+    });
     const empty = tabs.length === 0;
     elements.empty.hidden = !empty;
     elements.editor.hidden = empty;
+  }
+
+  /**
+   * Sends a rename and shows the stored name and language on an open tab.
+   * The server appends `.md` and can set the language to Auto (v4 REN-5 to
+   * REN-9). An unchanged name sends nothing (REN-6).
+   * @returns {Promise<string | null>} The message of a failure, or null.
+   */
+  async function renameDocument(id, typed, { current, workspace }) {
+    if (typed.trim() === current) return null;
+    const { status, data } = await api.updateDocument(id, { name: typed }, workspace);
+    if (status === 200) {
+      const tab = find(id);
+      if (tab) {
+        tab.name = data.name;
+        tab.language = data.language;
+        syncLanguage(tab);
+        render();
+        onActiveChange();
+      }
+      return null;
+    }
+    if (data?.error === 'invalid_name') return `Use 1 to ${NAME_MAX_LENGTH} characters and no control characters.`;
+    if (status === 404) return 'This document no longer exists.';
+    if (status === 0) return 'Cannot connect to the server. Try again.';
+    return 'Rename failed. Try again.';
+  }
+
+  // Ends the name edit. A field that had the focus gives it to its tab.
+  function endEdit() {
+    const { id, input } = edit;
+    const focused = document.activeElement === input;
+    edit = null;
+    const name = document.createElement('span');
+    name.className = 'tab-name';
+    input.replaceWith(name);
+    render();
+    if (focused) tabNode(id)?.focus();
+  }
+
+  // Enter, focus loss, Ctrl+S and the Save buttons commit (v4 REN-3, REN-4).
+  // The rename acts on the workspace of the commit, also when a switch ends
+  // first (EDGE-39). A failure keeps the field open with its text (REN-12).
+  // Resolves false when the rename failed.
+  /** @returns {Promise<boolean>} */
+  function commitEdit() {
+    if (!edit) return Promise.resolve(true);
+    if (edit.commit) return edit.commit;
+    const current = edit;
+    const tab = find(current.id);
+    current.input.readOnly = true;
+    current.commit = renameDocument(current.id, current.input.value, { current: tab.name, workspace: api.workspace() }).then(
+      (problem) => {
+        // A failure also shows when a close or a switch ended the edit.
+        if (problem !== null) showMessage(problem);
+        if (edit !== current) return problem === null;
+        if (problem === null) {
+          endEdit();
+          return true;
+        }
+        current.commit = null;
+        current.input.readOnly = false;
+        return false;
+      },
+    );
+    return current.commit;
   }
 
   const MOVES = { ArrowLeft: -1, ArrowRight: 1 };
@@ -190,6 +277,7 @@ export function createTabs({ editor, autosave, api, getStorage, elements, onActi
     else if (event.key === 'Home') nodes[0].focus();
     else if (event.key === 'End') nodes.at(-1).focus();
     else if (event.key === 'Enter' || event.key === ' ') controller.activate(id);
+    else if (event.key === 'F2') controller.startRename(id);
     else if (event.key === 'Delete' || event.key === 'Backspace') {
       // A cancelled close leaves the focus on the tab, also after a re-render.
       controller.close(id).then((closed) => {
@@ -199,9 +287,21 @@ export function createTabs({ editor, autosave, api, getStorage, elements, onActi
     event.preventDefault();
   });
 
+  // A double-click on the empty part of the strip, not on a tab, does what
+  // New does, also with no tab open (v4 NEW-3). Both presses must be on the
+  // strip: a first click on a close mark can remove the tab under the second.
+  let pressedOnStrip = false;
+  elements.strip.addEventListener('mousedown', (event) => {
+    if (event.detail === 1) pressedOnStrip = event.target === elements.strip;
+  });
+  elements.strip.addEventListener('dblclick', (event) => {
+    if (event.target === elements.strip && pressedOnStrip) controller.newDocument();
+  });
+
   /** Makes the tab's state from server content and starts autosave for it. */
   function load(tab, doc) {
     tab.name = doc.name;
+    tab.named = true;
     tab.language = doc.language;
     tab.appliedLanguage = languageOf(tab);
     tab.state = editor.createState(doc.content, languageSupport(tab.appliedLanguage));
@@ -213,6 +313,7 @@ export function createTabs({ editor, autosave, api, getStorage, elements, onActi
     if (index < 0) return;
     autosave.untrack(id);
     tabs.splice(index, 1);
+    if (edit?.id === id) edit = null;
     if (shownId === id) {
       editor.showBlank();
       shownId = null;
@@ -272,7 +373,13 @@ export function createTabs({ editor, autosave, api, getStorage, elements, onActi
       const byId = docs ? new Map(docs.map((doc) => [doc.id, doc])) : null;
       tabs = stored.ids
         .filter((id) => !byId || byId.has(id))
-        .map((id) => ({ id, name: byId?.get(id).name ?? 'Loading', language: byId?.get(id).language ?? null, state: null }));
+        .map((id) => ({
+          id,
+          name: byId?.get(id).name ?? 'Loading',
+          named: Boolean(byId),
+          language: byId?.get(id).language ?? null,
+          state: null,
+        }));
       persist();
       render();
       const first = find(stored.activeId) ?? tabs[0];
@@ -310,7 +417,8 @@ export function createTabs({ editor, autosave, api, getStorage, elements, onActi
         if (activeId !== id) return;
       }
       show(tab);
-      editor.focus();
+      // A name edit that started during the load keeps the focus (v4 EDGE-37).
+      if (document.activeElement !== edit?.input) editor.focus();
       onActiveChange();
       render();
       if (refresh) controller.refresh();
@@ -318,12 +426,17 @@ export function createTabs({ editor, autosave, api, getStorage, elements, onActi
 
     /** Opens a document in a tab, or activates its tab when it is open. */
     async open(id, name) {
-      if (!find(id)) tabs.push({ id, name: name ?? 'Loading', language: null, state: null });
+      if (!find(id)) tabs.push({ id, name: name ?? 'Loading', named: name !== undefined, language: null, state: null });
       await controller.activate(id);
     },
 
-    /** Creates an "Untitled N" Markdown document and opens it. */
+    /** Creates a "New NN" Markdown document and opens it (v4 NEW-6). */
     async newDocument() {
+      // An open name edit commits first (v4 EDGE-46). A switch meanwhile
+      // drops the create, as a stale reply would (TD-41).
+      const workspace = api.workspace();
+      await commitEdit();
+      if (api.workspace() !== workspace) return;
       const { status, data, stale } = await api.createDocument('', undefined, 'markdown');
       if (stale) return;
       if (status !== 201) {
@@ -339,7 +452,7 @@ export function createTabs({ editor, autosave, api, getStorage, elements, onActi
      * @param {string} content
      */
     async addDocument(meta, content) {
-      const tab = { id: meta.id, name: meta.name, language: meta.language, state: null };
+      const tab = { id: meta.id, name: meta.name, named: true, language: meta.language, state: null };
       tabs.push(tab);
       load(tab, { ...meta, content });
       await controller.activate(tab.id);
@@ -358,7 +471,7 @@ export function createTabs({ editor, autosave, api, getStorage, elements, onActi
     },
 
     /**
-     * The close flow (section 2.8, DOC-5, DOC-6). An empty "Untitled N"
+     * The close flow (section 2.8, DOC-5, DOC-6). An empty "New NN" (v4 NEW-7)
      * closes and is deleted with no prompt. Otherwise the user chooses Keep
      * (saves first; a failed save keeps the tab open), Delete permanently or
      * Cancel. Returns true when the tab closed.
@@ -381,7 +494,7 @@ export function createTabs({ editor, autosave, api, getStorage, elements, onActi
         content = data.content;
       }
 
-      if (content === '' && UNTITLED_NAME.test(tab.name)) {
+      if (content === '' && NEW_NAME.test(tab.name)) {
         removeTab(id);
         await deleteOnServer(id);
         return true;
@@ -420,21 +533,62 @@ export function createTabs({ editor, autosave, api, getStorage, elements, onActi
     closeAllSaved() {
       for (const tab of tabs) autosave.untrack(tab.id);
       tabs = [];
+      edit = null;
       activeId = null;
       shownId = null;
       editor.showBlank();
       render();
     },
 
-    /** Shows a new name on an open tab. */
-    rename(id, name) {
+    /**
+     * Opens the name field on a tab (v4 REN-1, REN-2): the full name with the
+     * base name selected. An inactive tab becomes active. A tab whose name is
+     * not known yet does not start the edit (EDGE-40).
+     */
+    async startRename(id) {
+      if (edit?.id === id) return;
+      await commitEdit();
       const tab = find(id);
-      if (!tab) return;
-      tab.name = name;
-      syncLanguage(tab);
-      render();
-      onActiveChange();
+      if (edit || !tab?.named) return;
+      if (activeId !== id) controller.activate(id);
+      const node = tabNode(id);
+      if (!node) return;
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.className = 'tab-name-input';
+      input.value = tab.name;
+      input.spellcheck = false;
+      input.autocomplete = 'off';
+      input.setAttribute('aria-label', 'Document name');
+      // Keys edit the text only, so Delete never reaches the tab strip
+      // (EDGE-36). Clicks stay in the field.
+      input.addEventListener('keydown', (event) => {
+        event.stopPropagation();
+        // Enter and Escape during an IME composition belong to the IME.
+        if (event.isComposing) return;
+        if (event.key === 'Enter') {
+          event.preventDefault();
+          commitEdit();
+        } else if (event.key === 'Escape') {
+          event.preventDefault();
+          if (edit?.input === input && !edit.commit) endEdit();
+        }
+      });
+      for (const type of ['click', 'dblclick']) input.addEventListener(type, (event) => event.stopPropagation());
+      input.addEventListener('blur', () => {
+        if (edit?.input === input) commitEdit();
+      });
+      node.querySelector('.tab-name').replaceWith(input);
+      edit = { id, input, commit: null };
+      input.focus();
+      const base = baseName(tab.name);
+      input.setSelectionRange(0, base === tab.name ? tab.name.length : base.length);
     },
+
+    /** Commits an open name edit. Resolves when its request is done: false when it failed. */
+    commitEdit,
+
+    renameDocument,
 
     /**
      * Stores a manual language override, or null for auto (EDT-4).
@@ -475,6 +629,7 @@ export function createTabs({ editor, autosave, api, getStorage, elements, onActi
         const tab = find(id);
         if (!tab) continue;
         tab.name = doc.name;
+        tab.named = true;
         tab.language = doc.language;
         syncLanguage(tab);
       }
