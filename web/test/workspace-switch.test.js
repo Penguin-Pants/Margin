@@ -42,13 +42,22 @@ test('saveAll names the cause of a failed save', async () => {
   ];
   for (const [onFlush, reason] of cases) {
     const docs = { a: unsaved() };
-    assert.deepEqual(await saveAll(fakeAutosave(docs, onFlush)), { ok: false, reason });
+    assert.deepEqual(await saveAll(fakeAutosave(docs, onFlush)), { ok: false, reason, unsaved: ['a'] });
   }
+});
+
+test('a failed saveAll lists the documents that are not saved (v4 SVB-4)', async () => {
+  const docs = { a: unsaved(), b: unsaved(), c: unsaved() };
+  const autosave = fakeAutosave(docs, (id) => {
+    docs[id] = id === 'b' ? { status: 'saved', reason: null } : { status: 'error', reason: 'network' };
+    return id === 'b';
+  });
+  assert.deepEqual(await saveAll(autosave), { ok: false, reason: 'network', unsaved: ['a', 'c'] });
 });
 
 test('saveAll repeats while text keeps changing and gives up after 3 rounds', async () => {
   const autosave = fakeAutosave({ a: unsaved() }, () => true); // saves, but the text is unsaved again
-  assert.deepEqual(await saveAll(autosave), { ok: false, reason: 'changing' });
+  assert.deepEqual(await saveAll(autosave), { ok: false, reason: 'changing', unsaved: ['a'] });
   assert.deepEqual(autosave.flushed, ['a', 'a', 'a']);
 });
 

@@ -2,7 +2,7 @@
 
 A private, single-owner text editor in the browser, inspired by Notepad++. Documents live on the server, so they are the same on every device. One password protects the app. It runs as one service on Railway with a persistent volume.
 
-Features: tabs with rename in place, autosave, plain text editing with line numbers, syntax highlighting for 11 languages, literal find and replace in the current tab, a document list, a keep-or-delete prompt when you close a tab, a warning when another device changed the same document, dark and light themes, and install as a desktop app in Chrome or Edge.
+Features: tabs with rename in place, autosave with Save and Save all buttons, plain text editing with line numbers, syntax highlighting for 11 languages, literal find and replace in the current tab, a document list, a keep-or-delete prompt when you close a tab, a warning when another device changed the same document, dark and light themes, and install as a desktop app in Chrome or Edge.
 
 For Markdown: a Visual mode (live preview) with one Visual/Raw toggle, a formatting toolbar, an outline of the headings, word and character counts, Mermaid diagrams, export to `.md`, `.txt`, `.html` and PDF, and drag and drop to open `.md`, `.txt` and `.html` files.
 
@@ -130,6 +130,7 @@ The same dialog sets one color per workspace: `#RGB` or `#RRGGBB`, in any letter
 - No offline use. The browser must reach the server to save.
 - A redeploy causes a short downtime (the service has a volume). Text typed meanwhile saves when the server is back.
 - Two devices editing one document get a conflict warning, not live sync.
+- Save (Ctrl+S) saves the active tab now. Save all saves every open tab of the workspace now and says "All documents saved." or names each document that did not save. Neither asks for a name or downloads a file: use Export for a file. Save all has no shortcut.
 - Rename on a tab (double-click or F2) or in the Documents list. Enter or a click elsewhere keeps the name, Escape cancels. A name without an extension gets `.md`. An extension is the text after the last dot when it is 1 to 10 letters or digits with at least one letter, so `Meeting 10.15` becomes `Meeting 10.15.md`. A rename that changes the extension sets the language back to Auto (detected). The tab text hides the extension; the tooltip shows the full name.
 - New documents are named "Untitled N" and start as Markdown. To change the type, use the language list in the status bar. An empty "Untitled N" tab closes without a prompt and its document is deleted.
 - Visual mode shows diagrams as images, so diagram text cannot be selected there. The Mermaid ELK layout is not included; diagrams use the dagre layout.

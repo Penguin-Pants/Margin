@@ -27,7 +27,7 @@ import { createTabs } from './tabs.js';
 import { animateThemeSwitch, createTheme } from './theme.js';
 import { otherWorkspace, showWorkspace, WORKSPACE, WORKSPACE_NAMES } from './workspace.js';
 import { textColorOn } from './workspace-color.js';
-import { createExclusive, switchWorkspace } from './workspace-switch.js';
+import { createExclusive, saveAll, switchWorkspace } from './workspace-switch.js';
 
 const $ = (id) => /** @type {HTMLElement} */ (document.getElementById(id));
 
@@ -239,6 +239,9 @@ tabs = createTabs({
     renderLanguage();
     renderMarkdownUi();
     exportWrap.hidden = !tabs.active();
+    // Save and Save all show with a tab, like Export (v4 SVB-2).
+    $('save').hidden = !tabs.active();
+    $('save-all').hidden = !tabs.active();
     // The tab paints first; outline and counts follow 100 ms later. Those of
     // another document go at once, so they never show for the wrong text.
     if (!tabs.shownId() || editor.view.state.doc !== describedDoc) clearSummary();
@@ -536,12 +539,25 @@ $('empty-new').addEventListener('click', () => tabs.newDocument());
 $('empty-list').addEventListener('click', () => doclist.show());
 $('find').addEventListener('click', () => tabs.shownId() && openFind(editor.view));
 
-// Save now (EDT-7, SAV-5). A name edit commits first (v4 REN-4).
+// Save now (EDT-7, SAV-5, v4 SVB-3). A name edit commits first (v4 REN-4).
+// The save status label shows the result.
 async function saveActive() {
   await tabs.commitEdit();
   const id = tabs.shownId();
   if (id) autosave.flush(id);
 }
+
+// Save all (v4 SVB-4): every open tab of the workspace saves now. A tab that
+// closes meanwhile counts as saved (EDGE-45). A conflict or a delete also
+// opens its dialog (EDGE-43).
+async function saveAllNow() {
+  await tabs.commitEdit();
+  const result = await saveAll(autosave);
+  if (result.ok) showMessage('All documents saved.');
+  else showMessage(`Not saved: ${result.unsaved.map((id) => tabs.get(id)?.name ?? id).join(', ')}.`);
+}
+$('save').addEventListener('click', () => saveActive());
+$('save-all').addEventListener('click', () => saveAllNow());
 
 // Shortcuts (EDT-7, EDT-9). Ctrl+N and Ctrl+W reach the page only in the
 // installed app window. Alt+N and Alt+W work everywhere.
@@ -557,6 +573,7 @@ setupShortcuts({
 });
 $('new-doc').title = `New document (${modName()}+N in the installed app, Alt+N)`;
 $('find').title = `Find (${modName()}+F) and replace (${modName()}+H)`;
+$('save').title = `Save now (${modName()}+S)`;
 // TD-15: clean tabs and the open document list refresh on window focus.
 window.addEventListener('focus', () => {
   tabs.refresh();
