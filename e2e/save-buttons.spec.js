@@ -94,6 +94,102 @@ test('Save all lists each document that cannot save by its full name (SVB-4, EDG
   await expect(page.getByRole('dialog', { name: 'This document changed on another device.' })).toBeVisible();
 });
 
+test('Save all lists a document deleted elsewhere, one over 1 MB and, after a 401, every unsaved one (EDGE-43)', async ({ page, api }) => {
+  const [first, second, third] = await openDocs(page, api, [['a.md', 'aaa'], ['b.md', 'bbb'], ['c.md', 'ccc']]);
+  for (const name of ['a.md', 'b.md', 'c.md']) {
+    await tab(page, name).click();
+    await edit(page, '1');
+  }
+  await api.delete(`/api/documents/${first}`);
+  await page.route(`**/api/documents/${second}/content`, (route) =>
+    route.fulfill({ status: 413, contentType: 'application/json', body: '{"error":"too_large"}' }),
+  );
+  await saveAllButton(page).click();
+  await expect(message(page)).toHaveText('Not saved: a.md, b.md.');
+  await expect(page.getByRole('dialog', { name: 'This document was deleted on another device.' })).toBeVisible();
+  expect(await stored(api, third)).toBe('ccc1');
+});
+
+test('after an expired session Save all lists every unsaved document and asks for the sign-in (EDGE-43)', async ({ page, api }) => {
+  await openDocs(page, api, [['a.md', 'aaa'], ['b.md', 'bbb']]);
+  await edit(page, '1');
+  await tab(page, 'b.md').click();
+  await edit(page, '2');
+  await page.route('**/api/documents/*/content', (route) =>
+    route.fulfill({ status: 401, contentType: 'application/json', body: '{"error":"unauthorized"}' }),
+  );
+  await saveAllButton(page).click();
+  await expect(page.getByRole('dialog', { name: 'Sign in again' })).toBeVisible();
+  await expect(message(page)).toHaveText('Not saved: a.md, b.md.');
+});
+
+test('Save shows the cause of a failed save in the save status label only (EDGE-43, SVB-3)', async ({ page, api }) => {
+  const [id] = await openDocs(page, api, [['a.txt', 'aaa']]);
+  await page.route(`**/api/documents/${id}/content`, (route) =>
+    route.fulfill({ status: 413, contentType: 'application/json', body: '{"error":"too_large"}' }),
+  );
+  await edit(page, '1');
+  await saveButton(page).click();
+  await expect(status(page)).toHaveText('Not saved: larger than 1 MB.');
+  expect(await message(page).textContent()).toBe('');
+});
+
+test('a mouse click on Save gives the focus back to the editor, so typing goes on (SVB-3)', async ({ page, api }) => {
+  const [id] = await openDocs(page, api, [['a.txt', 'aaa']]);
+  await edit(page, '1');
+  await saveButton(page).click();
+  await expect(status(page)).toHaveText('Saved');
+  await expect(editor(page)).toBeFocused();
+  await page.keyboard.type('2');
+  await saveAllButton(page).click();
+  await expect(message(page)).toHaveText('All documents saved.');
+  await expect(editor(page)).toBeFocused();
+  expect(await stored(api, id)).toBe('aaa12');
+});
+
+test('Save all during a running workspace switch waits for the switch and keeps its message (SVB-4)', async ({ page, api }) => {
+  await openDocs(page, api, [['a.md', 'aaa']]);
+  let release;
+  const held = new Promise((resolve) => (release = resolve));
+  let arrived;
+  const holding = new Promise((resolve) => (arrived = resolve));
+  await page.route((url) => url.pathname === '/api/documents' && url.searchParams.get('workspace') === 'work', async (route) => {
+    arrived();
+    await held;
+    await route.continue();
+  });
+  await page.locator('#workspace-switch').click();
+  await holding;
+  await saveAllButton(page).click();
+  await expect(message(page)).toHaveText('Wait until the workspace switch ends, then try again.');
+  release();
+  await expect(page).toHaveTitle('Work - Margin');
+});
+
+test('Save all during a name edit stores the typed name and the text (REN-4)', async ({ page, api }) => {
+  const [id] = await openDocs(page, api, [['a.txt', 'aaa']]);
+  await edit(page, '1');
+  await tab(page, 'a.txt').dblclick();
+  await page.keyboard.type('both');
+  await saveAllButton(page).click();
+  await expect(message(page)).toHaveText('All documents saved.');
+  expect(await (await api.get(`/api/documents/${id}`)).json()).toMatchObject({ name: 'both.txt', content: 'aaa1' });
+});
+
+test('a rename that fails before Save all keeps its message and saves nothing (REN-4, REN-12)', async ({ page, api }) => {
+  const [id] = await openDocs(page, api, [['a.txt', 'aaa']]);
+  await edit(page, '1');
+  await page.route(`**/api/documents/${id}`, (route) => (route.request().method() === 'PATCH' ? route.abort() : route.continue()));
+  await tab(page, 'a.txt').dblclick();
+  await page.keyboard.type('lost');
+  await saveAllButton(page).click();
+  await expect(message(page)).toHaveText('Cannot connect to the server. Try again.');
+  await page.evaluate(() => new Promise((resolve) => setTimeout(resolve, 300)));
+  await expect(message(page)).toHaveText('Cannot connect to the server. Try again.');
+  await expect(page.locator('.tab-name-input')).toHaveValue('lost.txt');
+  expect(await stored(api, id)).toBe('aaa');
+});
+
 test('a tab that closes while Save all runs counts as saved (EDGE-45)', async ({ page, api }) => {
   const [, second] = await openDocs(page, api, [['a.txt', 'aaa'], ['b.txt', 'bbb']]);
   await edit(page, '1');

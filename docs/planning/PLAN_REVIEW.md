@@ -224,6 +224,8 @@ Coding agents record deviations from the plan here.
 | 2026-10-11 | M22 | Tabs do not shrink (`flex: none`) and are at least 80 px wide. The name area grows. | With the extension hidden (REN-11), a one-letter name made the close mark the middle of the tab, so a click on the tab closed it. | Pending (owner) |
 | 2026-10-11 | M22 | Section 11 choices: Enter and Escape give the focus to the tab; focus loss leaves it where it went. The field is 18 characters wide. A REN-12 failure shows its message in the status bar. | The tab is where the edit started (F2). The tab has no room for an inline message. | Pending (owner) |
 | 2026-10-11 | M22 | `e2e/export-drop.spec.js` (DRP-1 test) and `e2e/tabs.spec.js` (audit C4 test) check the tabs' accessible names, not their text. | REN-11 hides the extension in the tab text. `REQUIREMENTS_V4.md` section 10 names the LAY-1 change. | Pending (owner) |
+| 2026-10-11 | M23 | Save all reuses `saveAll` of the workspace switch, which now also returns the ids that did not save. "Not saved" lists them in the order their tabs first loaded, with no cap. Save all runs in the `exclusive` lock (TD-42). | One save-all path. Section 11 leaves the list cap to the builder; a long list wraps in the status bar. | Pending (owner) |
+| 2026-10-11 | M23 | A failed rename stops Save, Save all and Ctrl+S: nothing saves, and the rename message stays. After a mouse click on Save or Save all, the focus goes back to the editor. | REN-4 says the edit commits first, not what a failure does. Saving after a failed rename would hide its message. The focus rule follows the Visual toggle. | Pending (owner) |
 
 ## 10. Phase review log
 
@@ -657,6 +659,12 @@ Two-pass review of each V4 phase diff (`REQUIREMENTS_V4.md` section 9). Same met
 | M22 | 4 | `input[type="text"]` (specificity 0,1,1) overrode the field's border and padding. | Confirmed | Fixed: `.tab .tab-name-input`. The REN-1 test checks the padding. It failed first. |
 | M22 | 5 | The EDGE-39 test passed without the workspace argument of the rename, and the Escape check read the accessible name, not the tab text. EDGE-41 had no test. | Confirmed | The EDGE-39 test now also checks that no message shows. With the argument removed it failed ("Cannot connect"). The Escape check reads the tab text. EDGE-41 test added (guard: it passed on the M22 code). |
 | M22 | 6 | `BUILD_PLAN.md` section 2.7 and the `REQUIREMENTS_V4.md` status were stale. | Confirmed | Updated: the PATCH row, the status line and section 9. |
+| M23 | 1 | Save all after a failed rename replaced the rename message with "All documents saved.". | Confirmed | Fixed: `commitEdit` resolves false on a failure, and Save, Save all and Ctrl+S then stop. The rename message stays. E2E test. It failed first. |
+| M23 | 2 | Save all during a workspace switch wrote its message over the switch's failure message. | Confirmed | Fixed: Save all runs in the lock of the switch, a drop and a move (TD-42), so it says "Wait until the workspace switch ends". E2E test. It failed first. |
+| M23 | 3 | The EDGE-43 test covered a 500 and a conflict, not a delete elsewhere, more than 1 MB or an expired session, and not Save. | Confirmed | Tests added: a 404 and a 413 in one Save all, a 401 that lists every unsaved document and opens the sign-in, and Save with a 413 (label only, no message). |
+| M23 | 4 | REN-4 had no Save all test, and the Save test did not check the text. | Confirmed | Tests added: Save all during a name edit stores the name and the text. A failed rename before Save all saves nothing. |
+| M23 | 5 | A mouse click on Save left the focus on the button, so typing went nowhere and Space pressed Save again. Ctrl+S keeps the focus in the editor. | Confirmed | Fixed like the Visual toggle (MDV-6): after a mouse click, the focus goes back to the editor. A keyboard click keeps the focus on the button (SVB-5). E2E test. It failed first. |
+| M23 | 6 | The narrow-window test did not list Save and Save all. | Confirmed | Added. They fit in 480 px. |
 
 ### V4 validation environment
 
@@ -664,3 +672,4 @@ Two-pass review of each V4 phase diff (`REQUIREMENTS_V4.md` section 9). Same met
 - Chromium e2e only, on the preinstalled Chromium build 1194 through a temporary config with `executablePath`, as in v3. Firefox and WebKit are not installed, so the `@smoke` runs stay with the owner.
 - Baseline on d9e9577: `npm test` 428 of 428. Chromium e2e 176 of 176.
 - M22: `npm test` 436 of 436. Chromium e2e 196 of 196, with 20 tests in `e2e/rename.spec.js`. The 17 first rename tests failed on an assertion against the code before M22. The new unit tests failed first on an assertion (the old extension rule, a stub `renamedName`).
+- M23: `npm test` 437 of 437. Chromium e2e 204 of 204 at f83f4b1. The 8 first tests in `e2e/save-buttons.spec.js` failed against the code before M23 (3 on an assertion, 5 on a click timeout, because the buttons did not exist). The review tests for rows 1, 2 and 5 failed first on an assertion.

@@ -97,7 +97,7 @@ export function createTabs({ editor, autosave, api, getStorage, elements, onActi
   let shownId = null;
   // The open name edit on a tab (v4 REN-1): the tab, its field and the
   // rename request in flight.
-  /** @type {{ id: string, input: HTMLInputElement, commit: Promise<void> | null } | null} */
+  /** @type {{ id: string, input: HTMLInputElement, commit: Promise<boolean> | null } | null} */
   let edit = null;
 
   const find = (id) => tabs.find((tab) => tab.id === id);
@@ -242,8 +242,10 @@ export function createTabs({ editor, autosave, api, getStorage, elements, onActi
   // Enter, focus loss, Ctrl+S and the Save buttons commit (v4 REN-3, REN-4).
   // The rename acts on the workspace of the commit, also when a switch ends
   // first (EDGE-39). A failure keeps the field open with its text (REN-12).
+  // Resolves false when the rename failed.
+  /** @returns {Promise<boolean>} */
   function commitEdit() {
-    if (!edit) return Promise.resolve();
+    if (!edit) return Promise.resolve(true);
     if (edit.commit) return edit.commit;
     const current = edit;
     const tab = find(current.id);
@@ -252,13 +254,14 @@ export function createTabs({ editor, autosave, api, getStorage, elements, onActi
       (problem) => {
         // A failure also shows when a close or a switch ended the edit.
         if (problem !== null) showMessage(problem);
-        if (edit !== current) return;
+        if (edit !== current) return problem === null;
         if (problem === null) {
           endEdit();
-          return;
+          return true;
         }
         current.commit = null;
         current.input.readOnly = false;
+        return false;
       },
     );
     return current.commit;
@@ -574,7 +577,7 @@ export function createTabs({ editor, autosave, api, getStorage, elements, onActi
       input.setSelectionRange(0, base === tab.name ? tab.name.length : base.length);
     },
 
-    /** Commits an open name edit. Resolves when its request is done. */
+    /** Commits an open name edit. Resolves when its request is done: false when it failed. */
     commitEdit,
 
     renameDocument,

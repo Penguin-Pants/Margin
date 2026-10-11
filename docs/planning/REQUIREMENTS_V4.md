@@ -1,6 +1,6 @@
 # Margin v4 Tab Rename, Save Buttons and New Documents: Requirements
 
-**Status:** Decision-complete. Open questions: none. M22 is built (PR #16). M23 and M24 are not built.
+**Status:** Decision-complete. Open questions: none. M22 and M23 are built (PR #16). M24 is not built.
 **Date:** 2026-10-11
 **Purpose:** Single source of truth for v4. No build plan exists yet. This file does not include an implementation.
 **Location:** `docs/planning/REQUIREMENTS_V4.md`
@@ -195,7 +195,7 @@ No `BUILD_PLAN_V4.md` exists. The build uses this sequence as the plan, as v2 di
 | Milestone | Work | Covers | Status |
 |-----------|------|--------|--------|
 | M22 | Extension rule and tab rename | EXT-1 to EXT-3, REN-1 to REN-12, EDGE-35 to EDGE-42 | Done (PR #16). Owner check: the name field with a screen reader, and in Firefox and Safari (`PLAN_REVIEW.md` section 16, M22 row 1). |
-| M23 | Save buttons | SVB-1 to SVB-5, EDGE-43 to EDGE-45 | Not started |
+| M23 | Save buttons | SVB-1 to SVB-5, EDGE-43 to EDGE-45 | Done (PR #16) |
 | M24 | New document names and tab strip double-click | NEW-3 to NEW-7, EDGE-46 to EDGE-48 | Not started |
 
 ### Definition of done
