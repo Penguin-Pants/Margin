@@ -215,6 +215,15 @@ Coding agents record deviations from the plan here.
 | 2026-10-10 | T34 | The `hasUnsaved()` check after the second `saveAll()` (TD-33 step 4) is gone. | It cannot be true: `saveAll` returns ok only after its own `hasUnsaved()` check, and only microtasks run from there to the tab close (PR #10 review 7). | User (chat, 2026-10-10) |
 | 2026-10-10 | Audit C2 | Rename and Delete in the Documents list name the workspace of their row, like the switch prefetch (TD-30), so they are never stale and no longer check `stale` (TD-41 lists `doclist.js`). `api.updateDocument` and `api.deleteDocument` take an optional workspace. | Their dialog can stay open while a switch ends. A stale check would drop the reply, and the active workspace would get the request and answer 404. The owner confirmed the action on that row. | User (chat, 2026-10-10) |
 | 2026-10-10 | Audit C6 | Autosave no longer emits `doc-saved` and `doc-too-large`. `BUILD_PLAN.md` section 2.8 lists both. | No module listened to them. The save status label shows both states. An event can come back with its first listener. | User (chat, 2026-10-10) |
+| 2026-10-11 | M22 | `REQUIREMENTS_V4.md` has no build plan. The milestones M22 to M24 in its section 9 are the phases, as for v2. | The execution prompt names `REQUIREMENTS_V4.md` as the plan scope. Section 9 says the next step is `BUILD_PLAN_V4.md`. | Pending (owner) |
+| 2026-10-11 | M22 | EXT-1 reads "letters" as Unicode letters (`\p{L}`) and "digits" as decimal digits (`\p{Nd}`), so `Bericht.Übersicht` has an extension. | The rule names letters, not ASCII letters. Highlighting and the accepted drop types use ASCII extensions only, so they do not change. | Pending (owner) |
+| 2026-10-11 | M22 | REN-5 also removes spaces between trailing dots (`todo . .` gives `todo.md`). A name of dots and spaces only returns 400 `invalid_name`, not `.md`. | Removing only the dots of `todo .` would leave `todo .md`. A name that is empty before `.md` breaks the 1-character rule. | Pending (owner) |
+| 2026-10-11 | M22 | The server always applies REN-5. REN-6 (an unchanged name sends nothing) runs in the client, in the one rename function that both paths call. A language sent with a rename wins over the REN-8 reset. | `REQUIREMENTS_V4.md` section 11 recommends the server route. The client must not send an unchanged name, or the server would append `.md` to it. | Pending (owner) |
+| 2026-10-11 | M22 | The `doc-renamed` event is gone. The Rename dialog calls `tabs.renameDocument`, which also serves the tab field. `BUILD_PLAN.md` section 2.8 still lists the event. | One path for REN-6, REN-9 and the failure texts (`AGENTS.md` Edits rule 6). The event carried the name only, so a dialog rename that cleared the override would have shown the old language. | Pending (owner) |
+| 2026-10-11 | M22 | `tabs.render` keeps each tab's node and updates it in place. Before, every render made new nodes and gave the focus back to the focused tab (audit C4 row 2). | EDGE-35 needs the field to keep its text, selection and focus. A new node between the two clicks of a double-click also dropped the `dblclick` event. | Pending (owner) |
+| 2026-10-11 | M22 | Tabs do not shrink (`flex: none`) and are at least 80 px wide. The name area grows. | With the extension hidden (REN-11), a one-letter name made the close mark the middle of the tab, so a click on the tab closed it. | Pending (owner) |
+| 2026-10-11 | M22 | Section 11 choices: Enter and Escape give the focus to the tab; focus loss leaves it where it went. The field is 18 characters wide. A REN-12 failure shows its message in the status bar. | The tab is where the edit started (F2). The tab has no room for an inline message. | Pending (owner) |
+| 2026-10-11 | M22 | `e2e/export-drop.spec.js` (DRP-1 test) and `e2e/tabs.spec.js` (audit C4 test) check the tabs' accessible names, not their text. | REN-11 hides the extension in the tab text. `REQUIREMENTS_V4.md` section 10 names the LAY-1 change. | Pending (owner) |
 
 ## 10. Phase review log
 
@@ -633,3 +642,25 @@ Two-pass review of each fix task. Same method and verdicts as section 10.
 - C7: `npm ci` applied the patch to both builds of `@lezer/markdown`. `npm test` 428 of 428. Chromium e2e 174 passed, plus the 2 known flakes. The pin test failed first on an assertion (`^1.8.0`).
 - Final: the perf spec, run alone, passed all targets (1 MB Python open 135 ms, 200 characters 924 ms, Ctrl+End 356 ms; Markdown notes 200 characters 758 ms; dense Markdown 200 characters 761 ms, counts 158 ms, outline 198 ms). A scan of the branch diff found one Oxford comma, in the new close tooltip (`AGENTS.md` rule 12). Fixed.
 - Owner follow-up (2026-10-10): section 11 rows 3, 4, 5 and 7 built. `npm test` 428 of 428. Chromium e2e 175 passed. The 3 tests that were flaky passed. `language.spec.js:74` failed once (new section 11 row 8), then passed 10 of 10 alone. After the row 8 fix (approved the same day): `npm test` 428 of 428 and Chromium e2e 176 of 176, with no failure.
+
+---
+
+## 16. V4 review log
+
+Two-pass review of each V4 phase diff (`REQUIREMENTS_V4.md` section 9). Same method and verdicts as section 10. `AGENTS.md` defines no finding classification, so section 1 applies (section 9, row of 2026-10-09). Pass 1 ran in a separate review agent; pass 2 checked each finding in the code and with a test.
+
+| Phase | # | Finding | Verdict | Action |
+|-------|---|---------|---------|--------|
+| M22 | 1 | The name field is a text box inside a `role="tab"` element, whose children are presentational in ARIA. A screen reader could announce the tab, not the field. | Risk | Checked: Chromium's accessibility tree shows the field as a focused text box named "Document name". Firefox, Safari and real screen readers are not checked here (owner check). The code comment now says so. |
+| M22 | 2 | A rename that fails after a close or a workspace switch ended the edit showed no message (REN-12, D65). | Confirmed | Fixed: the message shows whenever the request fails. E2E test: an aborted rename after a switch shows "Cannot connect". It failed first. |
+| M22 | 3 | Enter or Escape that ends an IME composition committed or cancelled the edit. | Confirmed | Fixed: keys with `isComposing` stay with the IME. E2E test with a composing Enter and Escape. It failed first. |
+| M22 | 4 | `input[type="text"]` (specificity 0,1,1) overrode the field's border and padding. | Confirmed | Fixed: `.tab .tab-name-input`. The REN-1 test checks the padding. It failed first. |
+| M22 | 5 | The EDGE-39 test passed without the workspace argument of the rename, and the Escape check read the accessible name, not the tab text. EDGE-41 had no test. | Confirmed | The EDGE-39 test now also checks that no message shows. With the argument removed it failed ("Cannot connect"). The Escape check reads the tab text. EDGE-41 test added (guard: it passed on the M22 code). |
+| M22 | 6 | `BUILD_PLAN.md` section 2.7 and the `REQUIREMENTS_V4.md` status were stale. | Confirmed | Updated: the PATCH row, the status line and section 9. |
+
+### V4 validation environment
+
+- Node.js 24.21.0 from nodejs.org (checksum verified), outside the repo. The container default is Node 22.
+- Chromium e2e only, on the preinstalled Chromium build 1194 through a temporary config with `executablePath`, as in v3. Firefox and WebKit are not installed, so the `@smoke` runs stay with the owner.
+- Baseline on d9e9577: `npm test` 428 of 428. Chromium e2e 176 of 176.
+- M22: `npm test` 436 of 436. Chromium e2e 196 of 196, with 20 tests in `e2e/rename.spec.js`. The 17 first rename tests failed on an assertion against the code before M22. The new unit tests failed first on an assertion (the old extension rule, a stub `renamedName`).

@@ -226,7 +226,7 @@ All `/api/*` routes except `POST /api/login` need a session. All responses from 
 | `POST /api/documents?name=<optional>&language=<optional>` | `text/plain` body (may be empty) | 201 `{id,name,version,language,updatedAt}` | 400 `invalid_name` or `invalid_language`, 413 `too_large` |
 | `GET /api/documents/:id` | none | 200 `{id,name,content,version,language,updatedAt}` | 404 `not_found` |
 | `PUT /api/documents/:id/content` | `text/plain` body, header `If-Match: <version>` | 200 `{version,updatedAt}` | 428 `version_required`, 412 `version_conflict` + `currentVersion`, 404, 413 |
-| `PATCH /api/documents/:id` | JSON `{name?, language?}` | 200 metadata | 400 `invalid_name` or `invalid_language`, 404 |
+| `PATCH /api/documents/:id` | JSON `{name?, language?}` | 200 metadata. v4: the stored name follows REN-5, so it can differ from the sent name. A rename that changes the extension and sends no language returns `language: null` (REN-8). | 400 `invalid_name` or `invalid_language`, 404 |
 | `DELETE /api/documents/:id` | none | 204 | 404 |
 
 **Notes**

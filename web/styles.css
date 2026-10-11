@@ -356,8 +356,9 @@ button.danger {
   white-space: nowrap;
 }
 
-/* The name field of a rename on the tab (v4 REN-1). */
-.tab-name-input {
+/* The name field of a rename on the tab (v4 REN-1). The tab class wins
+   over the input[type="text"] style of the dialogs. */
+.tab .tab-name-input {
   width: 18ch;
   min-width: 0;
   padding: 1px 4px;

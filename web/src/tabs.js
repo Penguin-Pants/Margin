@@ -143,7 +143,9 @@ export function createTabs({ editor, autosave, api, getStorage, elements, onActi
   // The ARIA tabs pattern with manual activation (audit C4). The tab list is
   // one Tab stop, on the selected tab. The close mark is for the mouse only:
   // a tab's content is presentational, so a button in it would be an
-  // unnamed Tab stop. The keyboard closes a tab with Delete.
+  // unnamed Tab stop. The keyboard closes a tab with Delete. The name field
+  // of a rename is in the tab only while it has the focus. Chromium exposes
+  // it as a named text box there (PLAN_REVIEW.md section 16, M22 row 1).
   function tabElement(tab) {
     const node = document.createElement('div');
     node.className = 'tab';
@@ -248,6 +250,8 @@ export function createTabs({ editor, autosave, api, getStorage, elements, onActi
     current.input.readOnly = true;
     current.commit = renameDocument(current.id, current.input.value, { current: tab.name, workspace: api.workspace() }).then(
       (problem) => {
+        // A failure also shows when a close or a switch ended the edit.
+        if (problem !== null) showMessage(problem);
         if (edit !== current) return;
         if (problem === null) {
           endEdit();
@@ -255,7 +259,6 @@ export function createTabs({ editor, autosave, api, getStorage, elements, onActi
         }
         current.commit = null;
         current.input.readOnly = false;
-        showMessage(problem);
       },
     );
     return current.commit;
@@ -542,6 +545,8 @@ export function createTabs({ editor, autosave, api, getStorage, elements, onActi
       // (EDGE-36). Clicks stay in the field.
       input.addEventListener('keydown', (event) => {
         event.stopPropagation();
+        // Enter and Escape during an IME composition belong to the IME.
+        if (event.isComposing) return;
         if (event.key === 'Enter') {
           event.preventDefault();
           commitEdit();
