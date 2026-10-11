@@ -233,7 +233,7 @@ test('a keyboard-only run reaches each visible control of the top bar, the outli
   await page.keyboard.press('Shift+Tab');
   await expect(page.getByRole('button', { name: 'New', exact: true })).toBeFocused();
   const expected = await page.evaluate(() =>
-    [...document.querySelectorAll(':is(.topbar, #md-toolbar, .statusbar) :is(button, select)')]
+    [...document.querySelectorAll(':is(.topbar, #editor-bar, .statusbar) :is(button, select)')]
       .filter((el) => el.checkVisibility() && !el.disabled)
       .map((el) => el.getAttribute('aria-label') || el.textContent.trim()),
   );

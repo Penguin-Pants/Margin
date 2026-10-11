@@ -1,4 +1,4 @@
-import { expect, login, newDocument, test } from './fixtures.js';
+import { expect, login, newDocument, openDocs, test } from './fixtures.js';
 
 const isSave = (res) => res.request().method() === 'PUT' && res.url().includes('/content');
 
@@ -45,4 +45,30 @@ test('Ctrl+click and Alt+click never create a second cursor', async ({ page }) =
     await lines.nth(1).click({ modifiers: [modifier], position: { x: 10, y: 5 } });
     await expect(page.locator('.cm-cursor')).toHaveCount(1);
   }
+});
+
+test('Word wrap is on by default on every tab, toggles at once and survives a reload (WRP-1, WRP-2)', async ({ page, api }) => {
+  const long = 'word '.repeat(400);
+  await openDocs(page, api, [
+    ['long.py', long],
+    ['long.md', long],
+  ]);
+  const wrap = page.getByRole('button', { name: 'Word wrap' });
+  const content = page.locator('.cm-content');
+  for (const name of ['long.py', 'long.md']) {
+    await page.getByRole('tab', { name }).click();
+    await expect(wrap).toBeVisible();
+    await expect(wrap).toHaveAttribute('aria-pressed', 'true');
+    await expect(content).toHaveClass(/cm-lineWrapping/);
+  }
+  await wrap.click();
+  await expect(wrap).toHaveAttribute('aria-pressed', 'false');
+  await expect(content).not.toHaveClass(/cm-lineWrapping/);
+  await page.getByRole('tab', { name: 'long.py' }).click();
+  await expect(content).not.toHaveClass(/cm-lineWrapping/);
+  await page.reload();
+  await expect(wrap).toHaveAttribute('aria-pressed', 'false');
+  await expect(content).not.toHaveClass(/cm-lineWrapping/);
+  await wrap.click();
+  await expect(content).toHaveClass(/cm-lineWrapping/);
 });

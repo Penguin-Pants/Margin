@@ -134,6 +134,15 @@ Added by the owner on 2026-10-11 after M22 to M24 (D78, D79).
 | TAB-2 | The new order is stored like the tab list today: per browser and per workspace (v3 TD-31). | `e2e`: the order is the same after a reload. |
 | TAB-3 | A press that moves less than 5 px is a click, not a drag. Click, double-click (REN-1) and the close mark keep their jobs. | `e2e`: a short move activates the tab and keeps the order. |
 
+### 3.6 Word wrap (addendum)
+
+Added by the owner on 2026-10-11.
+
+| ID | Requirement | Done when |
+|----|-------------|-----------|
+| WRP-1 | A "Word wrap" toggle button sits in the bar below the tab strip on every tab. The formatting buttons in that bar stay Markdown only (MDV-9). | `e2e`: the button shows on a `.md` tab and on a `.py` tab. |
+| WRP-2 | Word wrap is on by default. A click switches it on or off for the shown tab at once and for every other tab. The choice is remembered per browser, like the theme in EDT-6. | `e2e`: lines wrap on first visit, stop wrapping after a click on every tab and keep the choice after a reload. |
+
 ---
 
 ## 4. Edge cases and failure behavior

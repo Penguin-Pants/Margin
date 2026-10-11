@@ -48,7 +48,10 @@
     </aside>
     <main class="editor-pane">
       <div id="tabstrip" class="tabstrip" role="tablist" aria-label="Open documents"></div>
-      <div id="md-toolbar" class="md-toolbar" role="toolbar" aria-label="Formatting" hidden></div>
+      <div id="editor-bar" class="editor-bar" hidden>
+        <div id="md-toolbar" class="md-toolbar" role="toolbar" aria-label="Formatting" hidden></div>
+        <button type="button" id="word-wrap" aria-pressed="true" title="Wrap long lines">Word wrap</button>
+      </div>
       <div id="editor" class="editor"></div>
       <div id="empty-state" class="empty-state" hidden>
         <p>No document is open.</p>

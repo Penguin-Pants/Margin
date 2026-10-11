@@ -35,21 +35,26 @@ const lightTheme = [
 const themeExtension = (theme) => [theme === 'dark' ? oneDark : lightTheme, diagramTheme.of(theme)];
 // Visual mode acts only on Markdown documents (MDV-1).
 const modeExtension = (mode) => (mode === 'visual' ? visualMode : []);
+// Word wrap acts on every document (WRP-2).
+const wrapExtension = (wrap) => (wrap === 'on' ? EditorView.lineWrapping : []);
 
 /**
  * @param {HTMLElement} parent
  * @param {object} options
  * @param {'dark' | 'light'} options.theme
  * @param {'visual' | 'raw'} options.markdownMode
+ * @param {'on' | 'off'} options.wordWrap
  * @param {(update: import('@codemirror/view').ViewUpdate) => void} options.onUpdate Runs on every view update.
  * @param {() => void} options.onTooLarge Runs when a change is rejected by the 1 MB limit.
  */
-export function createEditor(parent, { theme, markdownMode, onUpdate, onTooLarge }) {
+export function createEditor(parent, { theme, markdownMode, wordWrap, onUpdate, onTooLarge }) {
   const themeSlot = new Compartment();
   const languageSlot = new Compartment();
   const modeSlot = new Compartment();
+  const wrapSlot = new Compartment();
   let currentTheme = theme;
   let currentMode = markdownMode;
+  let currentWrap = wordWrap;
 
   const extensions = (language) => [
     lineNumbers(),
@@ -64,6 +69,7 @@ export function createEditor(parent, { theme, markdownMode, onUpdate, onTooLarge
     baseTheme,
     themeSlot.of(themeExtension(currentTheme)),
     modeSlot.of(modeExtension(currentMode)),
+    wrapSlot.of(wrapExtension(currentWrap)),
     languageSlot.of(language),
     EditorView.updateListener.of(onUpdate),
   ];
@@ -84,11 +90,15 @@ export function createEditor(parent, { theme, markdownMode, onUpdate, onTooLarge
      * @param {import('@codemirror/state').Extension} language From languageSupport in languages.js.
      */
     createState: (doc, language) => EditorState.create({ doc, extensions: extensions(language) }),
-    /** Shows a tab's state. A stored state may have an older theme or mode. */
+    /** Shows a tab's state. A stored state may have an older theme, mode or wrap. */
     show(state) {
       view.setState(state);
       view.dispatch({
-        effects: [themeSlot.reconfigure(themeExtension(currentTheme)), modeSlot.reconfigure(modeExtension(currentMode))],
+        effects: [
+          themeSlot.reconfigure(themeExtension(currentTheme)),
+          modeSlot.reconfigure(modeExtension(currentMode)),
+          wrapSlot.reconfigure(wrapExtension(currentWrap)),
+        ],
       });
     },
     /** Shows the read-only blank state. */
@@ -106,6 +116,14 @@ export function createEditor(parent, { theme, markdownMode, onUpdate, onTooLarge
     setMarkdownMode(next) {
       currentMode = next;
       view.dispatch({ effects: modeSlot.reconfigure(modeExtension(next)) });
+    },
+    /**
+     * Switches word wrap for the shown tab. Other tabs get it in show().
+     * @param {'on' | 'off'} next
+     */
+    setWordWrap(next) {
+      currentWrap = next;
+      view.dispatch({ effects: wrapSlot.reconfigure(wrapExtension(next)) });
     },
     /** @param {import('@codemirror/state').Extension} language */
     setLanguage(language) {
