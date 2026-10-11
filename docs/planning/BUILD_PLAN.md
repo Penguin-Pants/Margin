@@ -207,7 +207,7 @@ CREATE TABLE documents (
 - Migrations: ordered array in `migrations.js`. Track with `PRAGMA user_version`. Apply in one transaction at start.
 - Language values: `plain`, `markdown`, `json`, `html`, `css`, `javascript`, `typescript`, `python`, `sql`, `yaml`, `shell`.
 - Name rule: trimmed, 1 to 255 characters, no control characters. Duplicate names are allowed. Documents are identified by `id`.
-- "Untitled N" rule: N = 1 + the highest N among names that match `^Untitled (\d+)$`. Use 1 if none match. Compute inside the insert transaction.
+- "New NN" rule (v4 NEW-4, NEW-5, replaces "Untitled N"): the number is 1 + the highest number among names in the workspace that match `^New (\d+)$` (`NEW_NAME` in `shared/contract.js`). Use 1 if none match. The name has at least 2 digits: "New 01", "New 99", "New 100". Compute inside the insert transaction. Old "Untitled N" names stay and do not count.
 - New (the button) creates a document with `language = 'markdown'`. A "Save mine as a new document" copy gets the language of its tab. A dropped file gets `NULL` (auto), so its extension decides.
 
 ### 2.7 HTTP API
@@ -253,7 +253,7 @@ All `/api/*` routes except `POST /api/login` need a session. All responses from 
 
 **Tabs (`tabs.js`):** Persist `{ids, activeId}` in `localStorage` key `pn.openTabs.v1`. On boot, drop IDs that no longer exist. With no stored tabs, show an empty state with "New document" and "Open document list". Load content on first activation. On window focus and on tab activation, fetch the list. Reload clean tabs whose server version is newer. Close clean tabs whose document is gone.
 
-**Close flow:** Empty content plus a name that matches `^Untitled \d+$`: delete and close with no prompt. Otherwise show a dialog with **Keep** (default focus), **Delete permanently** and **Cancel**. Keep flushes the save first. If that save fails, the tab stays open with status `error`.
+**Close flow:** Empty content plus a name that matches `^New (\d+)$` (v4 NEW-7; before v4, `^Untitled \d+$`): delete and close with no prompt. An empty "Untitled N" now gets the dialog. Otherwise show a dialog with **Keep** (default focus), **Delete permanently** and **Cancel**. Keep flushes the save first. If that save fails, the tab stays open with status `error`.
 
 **Conflict flow (412):** Dialog "This document changed on another device." Choices:
 - **Overwrite with mine:** `PUT` with `If-Match: currentVersion`. Another 412 shows the dialog again.

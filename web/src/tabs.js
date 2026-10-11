@@ -288,9 +288,14 @@ export function createTabs({ editor, autosave, api, getStorage, elements, onActi
   });
 
   // A double-click on the empty part of the strip, not on a tab, does what
-  // New does, also with no tab open (v4 NEW-3).
+  // New does, also with no tab open (v4 NEW-3). Both presses must be on the
+  // strip: a first click on a close mark can remove the tab under the second.
+  let pressedOnStrip = false;
+  elements.strip.addEventListener('mousedown', (event) => {
+    if (event.detail === 1) pressedOnStrip = event.target === elements.strip;
+  });
   elements.strip.addEventListener('dblclick', (event) => {
-    if (event.target === elements.strip) controller.newDocument();
+    if (event.target === elements.strip && pressedOnStrip) controller.newDocument();
   });
 
   /** Makes the tab's state from server content and starts autosave for it. */
@@ -427,8 +432,11 @@ export function createTabs({ editor, autosave, api, getStorage, elements, onActi
 
     /** Creates a "New NN" Markdown document and opens it (v4 NEW-6). */
     async newDocument() {
-      // An open name edit commits first (v4 EDGE-46).
+      // An open name edit commits first (v4 EDGE-46). A switch meanwhile
+      // drops the create, as a stale reply would (TD-41).
+      const workspace = api.workspace();
       await commitEdit();
+      if (api.workspace() !== workspace) return;
       const { status, data, stale } = await api.createDocument('', undefined, 'markdown');
       if (stale) return;
       if (status !== 201) {
