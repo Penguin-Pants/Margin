@@ -115,6 +115,6 @@ export const api = {
   deleteDocument: (id, target, version) =>
     docCall('DELETE', docPath(id), version === undefined ? {} : { headers: { 'If-Match': String(version) } }, target),
   getSettings: () => call('GET', '/api/settings'),
-  /** @param {{ autosaveSeconds: number, workspaceColors?: { personal: string | null, work: string | null } }} settings */
+  /** @param {{ autosaveSeconds: number, workspaceColors?: { personal: string | null, work: string | null }, brandTheme?: 'classic' | 'dr-claw' }} settings */
   saveSettings: (settings) => call('PUT', '/api/settings', { json: settings }),
 };

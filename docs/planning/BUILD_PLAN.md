@@ -108,7 +108,7 @@ SQLite file via node:sqlite
 ├─ railway.json            build, start and healthcheck config
 ├─ playwright.config.js
 ├─ README.md
-├─ margin-brand/           approved icons and BRAND.md, the source for web/icons/
+├─ margin-brand/           approved brand package (README.md, design.md, tokens, icons), the source for the served icons
 ├─ scripts/
 │  └─ build-web.js         esbuild bundle + copy HTML/CSS to dist/web
 ├─ server/
@@ -137,7 +137,8 @@ SQLite file via node:sqlite
 │  ├─ login.html
 │  ├─ styles.css
 │  ├─ manifest.webmanifest  install-as-app metadata (T27)
-│  ├─ icons/               favicon.ico, icon.svg, apple-touch-icon.png, icon-192.png, icon-512.png, icon-maskable-512.png (T27, copies from margin-brand/)
+│  ├─ favicon.ico, favicon.svg, apple-touch-icon.png  tab and touch icons (copies from margin-brand/assets/)
+│  ├─ icons/               icon-192.png, icon-512.png, icon-maskable-512.png (T27, copies from margin-brand/assets/exported/)
 │  ├─ src/
 │  │  ├─ theme-init.js     sets data-theme before first paint
 │  │  ├─ login.js
@@ -537,7 +538,7 @@ Sizes: **S** = one module plus tests. **M** = several files or a UI flow plus E2
 - **Objective:** Let Chrome and Edge install the app in its own window, where Ctrl+N and Ctrl+W reach the page.
 - **Requirements:** EDT-8, EDT-7 (enabler).
 - **Implementation:**
-  - `web/manifest.webmanifest`: `name` and `short_name` ("Margin", `margin-brand/BRAND.md`), `start_url: "/"`, `scope: "/"`, `display: "standalone"`, `background_color` and `theme_color` from the dark theme, icons 192 px, 512 px and 512 px maskable.
+  - `web/manifest.webmanifest`: `name` and `short_name` ("Margin", `margin-brand/README.md`), `start_url: "/"`, `scope: "/"`, `display: "standalone"`, `background_color` and `theme_color` from the dark theme, icons 192 px, 512 px and 512 px maskable.
   - `web/icons/`: copies of the approved icons in `margin-brand/` (no third-party logos).
   - `<link rel="manifest">`, `<meta name="theme-color">` and the favicon, SVG icon and Apple touch icon links in `index.html` and `login.html`. Build script copies the manifest and icons.
   - Add the routes to the public allowlist (TD-19).

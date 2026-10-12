@@ -111,6 +111,7 @@ export function choose({ title, message, choices, defaultValue, cancelValue, onC
  * @param {string} options.title
  * @param {string} [options.message]
  * @param {{ name: string, label: string, type?: string, value?: string, autocomplete?: string }[]} options.fields
+ *   A field of type 'switch' is an on/off checkbox. Its value is 'on' or 'off'.
  * @param {string} options.submitLabel
  * @param {boolean} [options.cancellable] false hides Cancel and ignores Escape.
  * @param {(values: Record<string, string>) => Promise<string | null>} options.onSubmit
@@ -121,6 +122,14 @@ export function formDialog({ title, message, fields, submitLabel, cancellable = 
   const form = el('form', { class: 'dialog-form', novalidate: '' });
   const inputs = fields.map((field, index) => {
     const inputId = `${id}-field-${index}`;
+    if (field.type === 'switch') {
+      const input = el('input', { id: inputId, name: field.name, type: 'checkbox', role: 'switch' });
+      input.checked = field.value === 'on';
+      const row = el('div', { class: 'dialog-switch' });
+      row.append(input, el('label', { for: inputId }, field.label));
+      form.append(row);
+      return input;
+    }
     const input = el('input', {
       id: inputId,
       name: field.name,
@@ -161,7 +170,9 @@ export function formDialog({ title, message, fields, submitLabel, cancellable = 
     form.addEventListener('submit', async (event) => {
       event.preventDefault();
       if (busy) return;
-      const values = Object.fromEntries(inputs.map((input) => [input.name, input.value]));
+      const values = Object.fromEntries(
+        inputs.map((input) => [input.name, input.type === 'checkbox' ? (input.checked ? 'on' : 'off') : input.value]),
+      );
       busy = true;
       submit.disabled = true;
       if (cancelButton) cancelButton.disabled = true;

@@ -1,6 +1,6 @@
 // A choice between two values, stored per browser in localStorage: the
-// theme (EDT-6), the outline panel (LAY-5), the Markdown mode (MDV-2) and
-// whether counts include Markdown syntax (CNT-2). The first value is the
+// theme (EDT-6), the copy of the brand theme, the outline panel (LAY-5), the
+// Markdown mode (MDV-2) and whether counts include Markdown syntax (CNT-2). The first value is the
 // default, also when storage is blocked or holds an unknown value.
 
 /**

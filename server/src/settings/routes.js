@@ -1,22 +1,24 @@
 // Owner settings (SAV-2, SAV-3, v3 CLR-2 to CLR-4). One value for all
-// devices, stored in the settings table: the autosave delay and one color per
-// workspace. The client uses the same default delay (shared/contract.js)
+// devices, stored in the settings table: the autosave delay, one color per
+// workspace and the brand theme. The client uses the same default delay (shared/contract.js)
 // until it has read this value.
-import { AUTOSAVE_DEFAULT_SECONDS, WORKSPACES } from '../../../shared/contract.js';
+import { AUTOSAVE_DEFAULT_SECONDS, BRAND_THEMES, WORKSPACES } from '../../../shared/contract.js';
 import { transaction } from '../db.js';
 
 const AUTOSAVE_KEY = 'autosave_seconds';
+const BRAND_THEME_KEY = 'brand_theme';
 const colorKey = (workspace) => `color_${workspace}`;
 
 const isValidSeconds = (value) => Number.isInteger(value) && value >= 1 && value <= 60;
 // #RGB or #RRGGBB in any letter case (CLR-3).
 const isValidColor = (value) => typeof value === 'string' && /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(value);
+const isValidBrandTheme = (value) => BRAND_THEMES.includes(value);
 
 /**
  * A stored value that breaks its rule (for example after a manual edit)
  * reads as the default. A color of null is the workspace's default color.
  * @param {import('node:sqlite').DatabaseSync} db
- * @returns {{ autosaveSeconds: number, workspaceColors: Record<string, string | null> }}
+ * @returns {{ autosaveSeconds: number, workspaceColors: Record<string, string | null>, brandTheme: string }}
  */
 function getSettings(db) {
   const select = db.prepare('SELECT value FROM settings WHERE key = ?');
@@ -28,16 +30,23 @@ function getSettings(db) {
       return [workspace, isValidColor(color) ? color : null];
     }),
   );
-  return { autosaveSeconds: isValidSeconds(stored) ? stored : AUTOSAVE_DEFAULT_SECONDS, workspaceColors };
+  const brandTheme = read(BRAND_THEME_KEY);
+  return {
+    autosaveSeconds: isValidSeconds(stored) ? stored : AUTOSAVE_DEFAULT_SECONDS,
+    workspaceColors,
+    brandTheme: isValidBrandTheme(brandTheme) ? brandTheme : BRAND_THEMES[0],
+  };
 }
 
 /**
  * The first rule a PUT body breaks, as an error reply body, or null.
- * workspaceColors is optional. When it is there, it names each workspace once.
+ * workspaceColors and brandTheme are optional. When workspaceColors is there,
+ * it names each workspace once.
  */
 function invalidSettings(body) {
   if (typeof body !== 'object' || body === null || Array.isArray(body)) return { error: 'invalid_request' };
   if (!isValidSeconds(body.autosaveSeconds)) return { error: 'invalid_autosave_seconds' };
+  if (Object.hasOwn(body, 'brandTheme') && !isValidBrandTheme(body.brandTheme)) return { error: 'invalid_brand_theme' };
   if (!Object.hasOwn(body, 'workspaceColors')) return null;
   const colors = body.workspaceColors;
   const keys = typeof colors === 'object' && colors !== null && !Array.isArray(colors) ? Object.keys(colors) : null;
@@ -67,6 +76,7 @@ export async function settingsRoutes(app, { db }) {
     const remove = db.prepare('DELETE FROM settings WHERE key = ?');
     transaction(db, () => {
       upsert.run(AUTOSAVE_KEY, String(body.autosaveSeconds));
+      if (Object.hasOwn(body, 'brandTheme')) upsert.run(BRAND_THEME_KEY, body.brandTheme);
       if (!Object.hasOwn(body, 'workspaceColors')) return;
       for (const workspace of WORKSPACES) {
         const color = body.workspaceColors[workspace];

@@ -20,7 +20,10 @@ after(() => rm(outDir, { recursive: true, force: true }));
 test('build writes each entry bundle with a sourcemap and copies the static files', async () => {
   assert.deepEqual((await readdir(outDir)).sort(), [
     'THIRD-PARTY-NOTICES.txt',
+    'apple-touch-icon.png',
     'chunks',
+    'favicon.ico',
+    'favicon.svg',
     'icons',
     'index.html',
     'login.html',
@@ -37,18 +40,19 @@ test('build writes each entry bundle with a sourcemap and copies the static file
   ]);
 });
 
-test('build copies the HTML pages and stylesheet unchanged', async () => {
+test('build copies the HTML pages, stylesheet, manifest and icons unchanged', async () => {
   const icons = (await readdir(join(rootDir, 'web', 'icons'))).map((name) => `icons/${name}`);
-  for (const name of ['index.html', 'login.html', 'styles.css', 'manifest.webmanifest', ...icons]) {
+  const files = ['index.html', 'login.html', 'styles.css', 'manifest.webmanifest', 'favicon.ico', 'favicon.svg', 'apple-touch-icon.png'];
+  for (const name of [...files, ...icons]) {
     assert.deepEqual(await readFile(join(outDir, name)), await readFile(join(rootDir, 'web', name)), name);
   }
 });
 
-test('the theme-init bundle runs as a classic script, sets the theme, outline and workspace state and adds no globals', async () => {
+test('the theme-init bundle runs as a classic script, sets the theme, brand theme, outline and workspace state and adds no globals', async () => {
   const { runInNewContext } = await import('node:vm');
   const code = await readFile(join(outDir, 'theme-init.js'), 'utf8');
-  for (const [theme, outline, workspace] of [[null, null, null], ['light', 'closed', 'work']]) {
-    const stored = { 'pn.theme': theme, 'pn.outline': outline, 'pn.workspace': workspace };
+  for (const [theme, brandTheme, outline, workspace] of [[null, null, null, null], ['light', 'dr-claw', 'closed', 'work']]) {
+    const stored = { 'pn.theme': theme, 'pn.brandTheme': brandTheme, 'pn.outline': outline, 'pn.workspace': workspace };
     const sandbox = {
       document: { title: 'Margin', documentElement: { dataset: { page: 'app' } } },
       localStorage: { getItem: (key) => stored[key] },
@@ -56,6 +60,7 @@ test('the theme-init bundle runs as a classic script, sets the theme, outline an
     runInNewContext(code, sandbox);
     assert.deepEqual(Object.keys(sandbox).sort(), ['document', 'localStorage']);
     assert.equal(sandbox.document.documentElement.dataset.theme, theme ?? 'dark');
+    assert.equal(sandbox.document.documentElement.dataset.brandTheme, brandTheme ?? 'classic');
     assert.equal(sandbox.document.documentElement.dataset.outline, outline ?? 'open');
     assert.equal(sandbox.document.documentElement.dataset.workspace, workspace ?? 'personal');
     assert.equal(sandbox.document.title, workspace === 'work' ? 'Work - Margin' : 'Personal - Margin');

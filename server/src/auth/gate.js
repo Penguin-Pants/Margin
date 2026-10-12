@@ -5,7 +5,8 @@ import { isValidSession, SESSION_COOKIE } from './sessions.js';
 // "METHOD path" pairs that answer without a session (BUILD_PLAN.md section 2.9).
 // Browsers fetch the manifest without cookies, so it and its icons are public
 // (TD-19). The sign-in page also shows the tab and touch icons before a
-// session exists. They hold no data.
+// session exists, and browsers ask for /favicon.ico and /apple-touch-icon.png
+// on their own. They hold no data.
 const PUBLIC = new Set([
   'GET /login',
   'GET /login.js',
@@ -13,9 +14,9 @@ const PUBLIC = new Set([
   'GET /styles.css',
   'GET /healthz',
   'GET /manifest.webmanifest',
-  'GET /icons/favicon.ico',
-  'GET /icons/icon.svg',
-  'GET /icons/apple-touch-icon.png',
+  'GET /favicon.ico',
+  'GET /favicon.svg',
+  'GET /apple-touch-icon.png',
   'GET /icons/icon-192.png',
   'GET /icons/icon-512.png',
   'GET /icons/icon-maskable-512.png',

@@ -1,14 +1,26 @@
 import assert from 'node:assert/strict';
 import { readdir, readFile } from 'node:fs/promises';
-import { basename, join } from 'node:path';
+import { join } from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 
-// margin-brand/ holds the approved Margin assets (BRAND.md). web/icons/ holds
-// copies of the icons that the app serves.
+// margin-brand/ holds the approved Margin assets (margin-brand/README.md).
+// The app serves copies: the tab and touch icons at the web root, where
+// browsers also look for them without a link, and the install icons in
+// web/icons/.
 const rootDir = fileURLToPath(new URL('../..', import.meta.url));
 const webDir = join(rootDir, 'web');
 const brandDir = join(rootDir, 'margin-brand');
+
+/** Each served icon URL and its source in margin-brand/. */
+const SOURCES = {
+  '/favicon.ico': 'assets/exported/favicon.ico',
+  '/favicon.svg': 'assets/source/favicon.svg',
+  '/apple-touch-icon.png': 'assets/exported/apple-touch-icon.png',
+  '/icons/icon-192.png': 'assets/exported/icon-192.png',
+  '/icons/icon-512.png': 'assets/exported/icon-512.png',
+  '/icons/icon-maskable-512.png': 'assets/exported/icon-maskable-512.png',
+};
 
 const readPage = (name) => readFile(join(webDir, name), 'utf8');
 const readManifest = async () => JSON.parse(await readFile(join(webDir, 'manifest.webmanifest'), 'utf8'));
@@ -29,11 +41,11 @@ async function iconUrls() {
   return [...new Set([...linked, ...listed])].sort();
 }
 
-test('each page has its Margin title and links the favicon, the SVG icon and the Apple touch icon', async () => {
+test('each page has its Margin title and links the favicon, the SVG favicon and the Apple touch icon', async () => {
   for (const [name, title] of [['index.html', 'Margin'], ['login.html', 'Sign in - Margin']]) {
     const html = await readPage(name);
     assert.equal(/<title>([^<]*)<\/title>/.exec(html)?.[1], title, name);
-    assert.deepEqual(iconLinks(html), ['icon /icons/favicon.ico', 'icon /icons/icon.svg', 'apple-touch-icon /icons/apple-touch-icon.png'], name);
+    assert.deepEqual(iconLinks(html), ['icon /favicon.ico', 'icon /favicon.svg', 'apple-touch-icon /apple-touch-icon.png'], name);
   }
   assert.match(await readPage('login.html'), /<h1>Margin<\/h1>/);
 });
@@ -47,13 +59,14 @@ test('the manifest names the app Margin and keeps its three install icons', asyn
 });
 
 test('each icon that a page or the manifest names is the approved file from margin-brand/', async () => {
-  for (const url of await iconUrls()) {
-    assert.ok(url.startsWith('/icons/'), url);
-    assert.deepEqual(await readFile(join(webDir, url)), await readFile(join(brandDir, basename(url))), url);
+  const urls = await iconUrls();
+  assert.deepEqual(urls, Object.keys(SOURCES).sort());
+  for (const url of urls) {
+    assert.deepEqual(await readFile(join(webDir, url)), await readFile(join(brandDir, SOURCES[url])), url);
   }
 });
 
-test('web/icons/ holds only the icons that a page or the manifest names', async () => {
+test('web/icons/ holds only the install icons that the manifest names', async () => {
   const files = (await readdir(join(webDir, 'icons'))).map((name) => `/icons/${name}`).sort();
-  assert.deepEqual(files, await iconUrls());
+  assert.deepEqual(files, (await readManifest()).icons.map((icon) => icon.src).sort());
 });

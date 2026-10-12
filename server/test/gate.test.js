@@ -19,9 +19,9 @@ const PUBLIC = [
   ['GET', '/styles.css'],
   ['GET', '/healthz'],
   ['GET', '/manifest.webmanifest'],
-  ['GET', '/icons/favicon.ico'],
-  ['GET', '/icons/icon.svg'],
-  ['GET', '/icons/apple-touch-icon.png'],
+  ['GET', '/favicon.ico'],
+  ['GET', '/favicon.svg'],
+  ['GET', '/apple-touch-icon.png'],
   ['GET', '/icons/icon-192.png'],
   ['GET', '/icons/icon-512.png'],
   ['GET', '/icons/icon-maskable-512.png'],
@@ -191,6 +191,11 @@ test('the manifest and icons are public with the right content types (TD-19)', a
     const res = await ctx.app.inject({ method: 'GET', url: `/icons/${name}` });
     assert.equal(res.statusCode, 200, name);
     assert.equal(res.headers['content-type'], 'image/png', name);
+  }
+  for (const [url, type] of [['/favicon.ico', 'image/vnd.microsoft.icon'], ['/favicon.svg', 'image/svg+xml'], ['/apple-touch-icon.png', 'image/png']]) {
+    const res = await ctx.app.inject({ method: 'GET', url });
+    assert.equal(res.statusCode, 200, url);
+    assert.equal(res.headers['content-type'], type, url);
   }
   assert.equal((await ctx.app.inject({ method: 'GET', url: '/icons/other.png' })).statusCode, 401);
 });

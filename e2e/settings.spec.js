@@ -138,3 +138,66 @@ test('Cancel and Escape wait while a save runs, and Settings opens once at a tim
   await page.waitForTimeout(300);
   await expect(page.getByRole('dialog', { name: 'Settings' })).toHaveCount(1);
 });
+
+// Brand theme: the Dr. Claw theme switch in Settings. Classic is the default.
+const rootState = (page) =>
+  page.evaluate(() => ({
+    brand: document.documentElement.dataset.brandTheme,
+    theme: document.documentElement.dataset.theme,
+    accent: getComputedStyle(document.documentElement).getPropertyValue('--accent').trim(),
+  }));
+
+test('the Dr. Claw theme switch applies at once, keeps unsaved text and light/dark, and applies on every device', async ({ page, browser, server, api }) => {
+  await page.goto('/login');
+  expect(await rootState(page)).toEqual({ brand: 'classic', theme: 'dark', accent: '#5ea1ff' });
+  await login(page);
+  expect(await rootState(page)).toEqual({ brand: 'classic', theme: 'dark', accent: '#5ea1ff' });
+  await newDocument(page);
+  await page.locator('.cm-content').click();
+  await page.keyboard.type('unsaved text');
+  await expect(status(page)).toHaveText('Unsaved changes');
+
+  // Keyboard: Tab to the switch, Space turns it on.
+  let dialog = await openSettings(page);
+  const toggle = dialog.getByRole('switch', { name: 'Dr. Claw theme' });
+  await expect(toggle).not.toBeChecked();
+  await toggle.focus();
+  await page.keyboard.press('Space');
+  await expect(toggle).toBeChecked();
+  await dialog.getByRole('button', { name: 'Save' }).click();
+  await expect(dialog).toBeHidden();
+  expect(await rootState(page)).toEqual({ brand: 'dr-claw', theme: 'dark', accent: '#e10606' });
+  await expect(page.getByRole('tab')).toHaveCount(1);
+  await expect(page.locator('.cm-content')).toHaveText('unsaved text');
+  expect((await (await api.get('/api/settings')).json()).brandTheme).toBe('dr-claw');
+
+  // Light and dark stay independent of the brand theme.
+  await page.getByRole('button', { name: 'Light theme' }).click();
+  await expect.poll(() => rootState(page)).toEqual({ brand: 'dr-claw', theme: 'light', accent: '#b90000' });
+  await expect(status(page)).toHaveText('Saved', { timeout: 10_000 });
+  await page.reload();
+  expect(await rootState(page)).toEqual({ brand: 'dr-claw', theme: 'light', accent: '#b90000' });
+  dialog = await openSettings(page);
+  await expect(dialog.getByRole('switch', { name: 'Dr. Claw theme' })).toBeChecked();
+  await dialog.getByRole('button', { name: 'Cancel' }).click();
+
+  // The sign-in page shows the choice of this browser.
+  await page.getByRole('button', { name: 'Account' }).click();
+  await page.getByRole('button', { name: 'Sign out' }).click();
+  await page.waitForURL((url) => url.pathname === '/login');
+  expect(await rootState(page)).toEqual({ brand: 'dr-claw', theme: 'light', accent: '#b90000' });
+
+  // Another device reads it from the server.
+  const other = await browser.newContext({ baseURL: server.url });
+  const pageB = await other.newPage();
+  await login(pageB);
+  expect(await rootState(pageB)).toEqual({ brand: 'dr-claw', theme: 'dark', accent: '#e10606' });
+
+  // Pointer: a click turns it off again. Classic keeps its blue accent.
+  dialog = await openSettings(pageB);
+  await dialog.getByRole('switch', { name: 'Dr. Claw theme' }).click();
+  await dialog.getByRole('button', { name: 'Save' }).click();
+  await expect(dialog).toBeHidden();
+  expect(await rootState(pageB)).toEqual({ brand: 'classic', theme: 'dark', accent: '#5ea1ff' });
+  await other.close();
+});

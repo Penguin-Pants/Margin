@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { readChoice } from '../src/stored-choice.js';
-import { animateThemeSwitch, createTheme, THEME } from '../src/theme.js';
+import { animateThemeSwitch, BRAND_THEME, createTheme, setBrandTheme, THEME } from '../src/theme.js';
 
 function fakeStorage(initial = {}) {
   const data = new Map(Object.entries(initial));
@@ -128,4 +128,39 @@ test('a skipped transition switches the theme and leaves no unhandled rejection 
   process.off('unhandledRejection', onRejection);
   assert.equal(toggled, 1);
   assert.deepEqual(rejections, []);
+});
+
+// Brand theme (Settings): Classic or Dr. Claw. The server holds it; this
+// browser keeps a copy, so pages show it before first paint.
+test('the brand theme is classic when nothing or an unknown value is stored', () => {
+  assert.equal(readChoice({ ...BRAND_THEME, getStorage: () => fakeStorage() }), 'classic');
+  assert.equal(readChoice({ ...BRAND_THEME, getStorage: () => fakeStorage({ 'pn.brandTheme': 'blue' }) }), 'classic');
+  assert.equal(readChoice({ ...BRAND_THEME, getStorage: () => throwingStorage }), 'classic');
+  assert.equal(readChoice({ ...BRAND_THEME, getStorage: () => fakeStorage({ 'pn.brandTheme': 'dr-claw' }) }), 'dr-claw');
+});
+
+test('setBrandTheme shows the brand theme on the root, keeps a copy and leaves data-theme alone', () => {
+  const storage = fakeStorage();
+  const root = { dataset: { theme: 'light' } };
+  setBrandTheme({ getStorage: () => storage, root, value: 'dr-claw' });
+  assert.deepEqual(root.dataset, { theme: 'light', brandTheme: 'dr-claw' });
+  assert.equal(storage.data.get('pn.brandTheme'), 'dr-claw');
+  setBrandTheme({ getStorage: () => storage, root, value: 'classic' });
+  assert.deepEqual(root.dataset, { theme: 'light', brandTheme: 'classic' });
+  assert.equal(storage.data.get('pn.brandTheme'), 'classic');
+});
+
+test('setBrandTheme shows an unknown value as classic and works with blocked storage', () => {
+  const root = { dataset: {} };
+  setBrandTheme({ getStorage: () => throwingStorage, root, value: 'dr-claw' });
+  assert.equal(root.dataset.brandTheme, 'dr-claw');
+  setBrandTheme({ getStorage: () => throwingStorage, root, value: undefined });
+  assert.equal(root.dataset.brandTheme, 'classic');
+});
+
+test('switching light and dark keeps the brand theme', () => {
+  const root = { dataset: { brandTheme: 'dr-claw' } };
+  const theme = createTheme({ getStorage: () => fakeStorage(), root });
+  theme.toggle();
+  assert.deepEqual(root.dataset, { brandTheme: 'dr-claw', theme: 'light' });
 });

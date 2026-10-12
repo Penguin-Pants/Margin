@@ -6,6 +6,9 @@
 /** The two fixed workspaces (v3 WS-1, TD-20). The first is the default. */
 export const WORKSPACES = /** @type {['personal', 'work']} */ (['personal', 'work']);
 
+/** The brand themes (Settings). The first is the default, so current owners keep Classic. */
+export const BRAND_THEMES = /** @type {['classic', 'dr-claw']} */ (['classic', 'dr-claw']);
+
 /** The language ids of the manual override (EDT-4). The browser adds the labels. */
 export const LANGUAGE_IDS = ['plain', 'markdown', 'json', 'html', 'css', 'javascript', 'typescript', 'python', 'sql', 'yaml', 'shell'];
 
