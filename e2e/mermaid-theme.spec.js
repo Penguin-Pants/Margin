@@ -69,7 +69,7 @@ test('a diagram with a syntax error shows the error, keeps the source and leaves
   const [id] = await openDocs(page, api, [['a.md', `${bad(1)}\n\n${bad(2)}\n\n${DIAGRAM}\n\nend`]]);
   await leaveBlocks(page);
   await expect(page.locator('.cm-md-mermaid-error')).toHaveCount(2, { timeout: 15_000 });
-  await expect(page.locator('.cm-md-mermaid-error').first()).toContainText('Diagram error');
+  await expect(page.locator('.cm-md-mermaid-error').first()).toHaveText('This diagram has an error in its code. Click the diagram to see and fix the code.');
   await expect(page.locator('.cm-md-mermaid img')).toBeVisible();
   // Mermaid marks each SVG it draws. None stays in the page, also after errors.
   await expect(page.locator('[aria-roledescription]')).toHaveCount(0);
@@ -81,7 +81,10 @@ test('a failed load says so, and the diagram loads when it shows again', async (
   await page.route('**/mermaid-frame.js', (route) => (fail ? route.fulfill({ status: 401, body: '' }) : route.continue()));
   await openDocs(page, api, [['a.md', `${DIAGRAM}\n\nend`]]);
   await leaveBlocks(page);
-  await expect(page.locator('.cm-md-mermaid')).toContainText('Could not load the diagram tool', { timeout: 15_000 });
+  await expect(page.locator('.cm-md-mermaid')).toHaveText(
+    'Could not load the diagram tool. Check the connection or sign in again, then click the diagram and click outside it to try again.',
+    { timeout: 15_000 },
+  );
   fail = false;
   await page.locator('.cm-md-mermaid').click();
   await leaveBlocks(page);

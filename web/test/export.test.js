@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { ensureSyntaxTree } from '@codemirror/language';
 import { EditorState } from '@codemirror/state';
-import { exportContent, exportFileName, exportFormats } from '../src/export.js';
+import { ExportError, exportContent, exportErrorText, exportFileName, exportFormats } from '../src/export.js';
 import { languageSupport } from '../src/languages.js';
 
 test('Markdown offers md, txt, html and pdf, other types their original source and txt (EXP-2)', () => {
@@ -92,4 +92,10 @@ test('the PDF page is titled with the name without its extension, so the saved f
   const result = exportContent({ name: 'report.v2.md', format: 'pdf', state: stateOf('# T', 'markdown') });
   assert.match(result.content, /<title>report\.v2<\/title>/);
   assert.match(result.content, /<h1>T<\/h1>/);
+});
+
+test('an export failure shows its own plain text, and any other error a generic text with no internal detail', () => {
+  assert.equal(exportErrorText(new ExportError('The document is still being read. Wait a moment, then export again.')), 'The document is still being read. Wait a moment, then export again.');
+  assert.equal(exportErrorText(new TypeError("Cannot read properties of undefined (reading 'x')")), 'Export failed. Try again.');
+  assert.equal(exportErrorText('thrown text'), 'Export failed. Try again.');
 });

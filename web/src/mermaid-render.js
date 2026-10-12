@@ -22,7 +22,9 @@ export const mermaidConfig = (theme) => ({
 /** @typedef {{ svg: string, width: number, height: number } | { error: string }} Result */
 /** @typedef {(source: string, config: object) => Promise<Result>} Draw */
 
-const LOAD_ERROR = 'Could not load the diagram tool. It tries again when the diagram shows again.';
+const LOAD_ERROR = 'Could not load the diagram tool. Check the connection or sign in again, then click the diagram and click outside it to try again.';
+// Mermaid's own error text names parser internals, so it never shows.
+const SYNTAX_ERROR = 'This diagram has an error in its code. Click the diagram to see and fix the code.';
 
 /**
  * Renders diagrams one at a time, because Mermaid has one global
@@ -78,7 +80,7 @@ export function createRenderer({ load, limit = 32 }) {
         if (entries.get(key) === own) entries.delete(key);
         return { error: LOAD_ERROR };
       }
-      own.value = 'error' in result ? { error: `Diagram error: ${result.error}` } : result;
+      own.value = 'error' in result ? { error: SYNTAX_ERROR } : result;
       return own.value;
     });
     queue = entry.result.then(() => undefined);

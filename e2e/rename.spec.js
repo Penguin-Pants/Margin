@@ -206,7 +206,7 @@ test('a failed rename keeps the field open with the typed text and a message, an
   await tab(page, 'a.txt').dblclick();
   await field(page).fill('. . .');
   await page.keyboard.press('Enter');
-  await expect(message(page)).toHaveText('Use 1 to 255 characters and no control characters.');
+  await expect(message(page)).toHaveText('Use a name of 1 to 255 characters, with no tabs or line breaks.');
   await expect(field(page)).toHaveValue('. . .');
   await expect(field(page)).toBeFocused();
 

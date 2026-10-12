@@ -46,6 +46,7 @@ test('an expired session opens the re-login dialog and saves the text after sign
   await page.keyboard.type(' after');
   const dialog = page.getByRole('dialog', { name: 'Sign in again' });
   await expect(dialog).toBeVisible();
+  await expect(dialog).toContainText('Your session ended. Your text is kept in this window. Sign in to save it.');
   await expect(page.locator('.cm-content')).toHaveText('before after');
   await page.keyboard.press('Escape');
   await page.keyboard.press('Escape');

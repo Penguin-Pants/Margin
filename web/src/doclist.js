@@ -129,12 +129,12 @@ export function createDocList({ api, tabs, autosave, exclusive, root, button, pa
   // tab closes: text typed during the request stays, and its next save gets
   // 404 and the EDGE-1 dialog, so no text is lost (R11).
   async function moveDocument(doc, target) {
-    await exclusive('move', async () => {
+    await exclusive('document move', async () => {
       // A pending tab rename finishes in this workspace first. A failed one
       // keeps its field and message, and nothing moves.
       if (!(await tabs.commitEdit())) return;
       if (!(await autosave.flush(doc.id))) {
-        showMessage('Not moved: unsaved changes could not be saved.');
+        showMessage('Not moved: its changes could not be saved first. See the save status, then try again.');
         return;
       }
       const { status, stale } = await api.updateDocument(doc.id, { workspace: target });
@@ -146,7 +146,7 @@ export function createDocList({ api, tabs, autosave, exclusive, root, button, pa
         return;
       }
       if (status !== 200) {
-        showMessage('Not moved. Try again.');
+        showMessage('Could not move the document. Try again.');
         return;
       }
       if (tabs.isClean(doc.id)) tabs.removeTab(doc.id);
@@ -170,7 +170,7 @@ export function createDocList({ api, tabs, autosave, exclusive, root, button, pa
     // Close the tab first, so no pending save reaches the deleted document.
     tabs.removeTab(doc.id);
     const { status } = await api.deleteDocument(doc.id, workspace);
-    if (status !== 204 && status !== 404) showMessage('Delete failed. Try again.');
+    if (status !== 204 && status !== 404) showMessage('Could not delete the document. Try again.');
     await refresh();
   }
 

@@ -15,5 +15,5 @@ export function loginErrorText(status, data) {
     return `Too many failed attempts. Wait ${minutes} ${minutes === 1 ? 'minute' : 'minutes'}, then try again.`;
   }
   if (status === 0) return CANNOT_CONNECT;
-  return 'Sign-in failed. Try again.';
+  return 'Could not sign in. Try again.';
 }

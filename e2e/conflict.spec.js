@@ -205,3 +205,31 @@ test('two conflicts show one dialog after the other', async ({ page, api }) => {
   await page.getByRole('tab', { name: 'New 02' }).click();
   await expect(editor(page)).toHaveText('theirs two');
 });
+
+test('a server error inside a choice says so in plain words and keeps my text', async ({ page, api }) => {
+  await login(page);
+  const id = await savedDocument(page, api, 'mine');
+  await editUntilConflict(page, api, id);
+  await page.route(
+    (url) => url.pathname === '/api/documents' && url.search.includes('name='),
+    (route) =>
+      route.request().method() === 'POST'
+        ? route.fulfill({ status: 500, contentType: 'application/json', body: '{"error":"internal_error"}' })
+        : route.fallback(),
+  );
+  const dialog = conflictDialog(page);
+  await dialog.getByRole('button', { name: 'Save mine as a new document' }).click();
+  await expect(dialog.getByRole('alert')).toHaveText('The server could not do that. Try again.');
+  await expect(editor(page)).toHaveText('mine more');
+});
+
+test('Load the other version when it was deleted meanwhile says so and keeps my text', async ({ page, api }) => {
+  await login(page);
+  const id = await savedDocument(page, api, 'mine');
+  await editUntilConflict(page, api, id);
+  expect((await api.delete(`/api/documents/${id}`)).status()).toBe(204);
+  const dialog = conflictDialog(page);
+  await dialog.getByRole('button', { name: 'Load the other version' }).click();
+  await expect(dialog.getByRole('alert')).toHaveText('The other version was deleted. Save yours as a new document.');
+  await expect(editor(page)).toHaveText('mine more');
+});

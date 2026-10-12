@@ -8,7 +8,7 @@ test('sign-in errors say wrong password, wait in whole minutes, no connection, o
   assert.equal(loginErrorText(429, { retryAfterSeconds: 5 }), 'Too many failed attempts. Wait 1 minute, then try again.');
   assert.equal(loginErrorText(429, null), 'Too many failed attempts. Wait 15 minutes, then try again.');
   assert.equal(loginErrorText(0, null), CANNOT_CONNECT);
-  assert.equal(loginErrorText(500, null), 'Sign-in failed. Try again.');
+  assert.equal(loginErrorText(500, null), 'Could not sign in. Try again.');
 });
 
 test('the no-connection text is the one the e2e specs expect', () => {

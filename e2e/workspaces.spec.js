@@ -362,7 +362,7 @@ test('a failed move keeps the tab and moves nothing (EDGE-32)', async ({ page, a
   );
   await documentsButton(page).click();
   await moveButton(page, 'a.md', 'Work').click();
-  await expect(message(page)).toHaveText('Not moved. Try again.');
+  await expect(message(page)).toHaveText('Could not move the document. Try again.');
   await expect(page.getByRole('tab', { name: 'a.md' })).toHaveCount(1);
   expect(await names(api, 'work')).toEqual([]);
 });
@@ -405,7 +405,7 @@ test.describe('moves with a 30-second autosave delay', () => {
     await page.keyboard.type('x');
     await documentsButton(page).click();
     await moveButton(page, 'a.md', 'Work').click();
-    await expect(message(page)).toHaveText('Not moved: unsaved changes could not be saved.');
+    await expect(message(page)).toHaveText('Not moved: its changes could not be saved first. See the save status, then try again.');
     await expect(page.getByRole('tab', { name: 'a.md' })).toHaveCount(1);
     expect(await names(api, 'work')).toEqual([]);
   });

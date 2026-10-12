@@ -37,7 +37,7 @@ export function droppedText({ name, bytes }) {
     // The decoder drops a byte order mark, and fatal rejects invalid UTF-8.
     return { text: new TextDecoder('utf-8', { fatal: true }).decode(bytes).replace(/\r\n?/g, '\n') };
   } catch {
-    return { error: 'not UTF-8 text' };
+    return { error: 'the text is not UTF-8; save the file as UTF-8 first' };
   }
 }
 
@@ -94,7 +94,7 @@ export async function openDropped({ files, api, open, showMessage }) {
       return;
     }
     if (status !== 201) {
-      rejected.push(`${file.name} (${status === 413 ? 'larger than 1 MB' : 'not accepted by the server'})`);
+      rejected.push(`${file.name} (${status === 413 ? 'larger than 1 MB' : 'could not be saved'})`);
       continue;
     }
     taken.add(name.toLowerCase());

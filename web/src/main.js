@@ -10,7 +10,7 @@ import { openDropped, setupDrop } from './drop.js';
 import { createDropdown } from './dropdown.js';
 import { createEditor } from './editor.js';
 import { emit } from './events.js';
-import { download, exportContent, exportFormats, fullTree, printPage } from './export.js';
+import { download, exportContent, exportErrorText, exportFormats, fullTree, printPage } from './export.js';
 import { LANGUAGES } from './languages.js';
 import { CANNOT_CONNECT, loginErrorText } from './error-text.js';
 import { mermaidSources } from './markdown-html.js';
@@ -90,7 +90,7 @@ $('logout').addEventListener('click', async () => {
   account.close();
   const { status } = await api.logout();
   if (status === 204 || status === 401) location.replace('/login');
-  else showMessage('Sign-out failed. Try again.');
+  else showMessage('Could not sign out. Try again.');
 });
 
 // Settings (SAV-2 to SAV-4): the autosave delay, one value on the server for
@@ -156,7 +156,7 @@ async function showSettings() {
       if (data?.error === 'invalid_autosave_seconds') return 'Use a whole number from 1 to 60.';
       if (data?.error === 'invalid_color') return `Use #RGB or #RRGGBB for the ${WORKSPACE_NAMES[data.workspace]} color.`;
       if (status === 0) return CANNOT_CONNECT;
-      return 'Saving the settings failed. Try again.';
+      return 'Could not save the settings. Try again.';
     },
   });
 }
@@ -180,7 +180,7 @@ $('change-password').addEventListener('click', async () => {
       // Wrong current passwords count in the login limiter.
       if (status === 429) return loginErrorText(status, data);
       if (status === 0) return CANNOT_CONNECT;
-      return 'Password change failed. Try again.';
+      return 'Could not change the password. Try again.';
     },
   });
   if (changed) showMessage('Password changed. Other devices are signed out.');
@@ -480,7 +480,7 @@ async function exportAs(format) {
     if (format === 'pdf') printPage(file.content);
     else download(file);
   } catch (err) {
-    showMessage(`Export failed. ${err.message}`);
+    showMessage(exportErrorText(err));
   }
 }
 
@@ -527,7 +527,7 @@ setupDrop({
   win: window,
   overlay: $('drop-overlay'),
   onFiles: (files) =>
-    exclusive('drop', () => openDropped({ files, api, open: (meta, text) => tabs.addDocument(meta, text), showMessage })),
+    exclusive('opening of dropped files', () => openDropped({ files, api, open: (meta, text) => tabs.addDocument(meta, text), showMessage })),
 });
 
 // CON-1 and EDGE-1: a 412 or 404 save opens a dialog with the choices.
@@ -585,10 +585,10 @@ async function saveActive({ refocus = false } = {}) {
 async function saveAllNow({ refocus = false } = {}) {
   if (!(await tabs.commitEdit())) return;
   if (refocus && tabs.shownId()) editor.focus();
-  await exclusive('save all', async () => {
+  await exclusive('Save all', async () => {
     const result = await saveAll(autosave);
     if (result.ok) showMessage('All documents saved.');
-    else showMessage(`Not saved: ${result.unsaved.map((id) => tabs.get(id)?.name ?? id).join(', ')}.`);
+    else showMessage(`Not saved: ${result.unsaved.map((id) => tabs.get(id)?.name ?? 'a closed document').join(', ')}.`);
   });
 }
 // detail is 0 for a click from the keyboard, which keeps the focus (SVB-5).
