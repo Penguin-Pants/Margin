@@ -19,6 +19,8 @@ Canonical branding source in the repo: `/margin-brand/`
 5. Keep the GitHub repository name `NPPweb` unchanged.
 6. Do not interpret the branding package as permission to redesign product workflows.
 
+Before implementation, verify that `margin-brand/assets/source/icon.svg`, `margin-brand/assets/source/favicon.svg`, `margin-brand/assets/exported/icon-192.png`, `margin-brand/assets/exported/icon-512.png`, `margin-brand/assets/exported/icon-maskable-512.png` and `margin-brand/theme/tokens.css` all exist. If any are missing, stop and report them. The mockup PNGs are not acceptable substitutes.
+
 ## 2. Adopt the approved identity
 
 Use the approved product identity exactly as defined in `/margin-brand/`.

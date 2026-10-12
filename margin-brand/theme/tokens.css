@@ -1,0 +1,27 @@
+/* Margin Redline brand tokens. Add AFTER existing Classic theme token declarations.
+   Classic remains defined by the original stylesheet: no values are overwritten when
+   data-brand-theme is absent or "classic". data-theme controls light/dark independently. */
+:root[data-brand-theme="dr-claw"][data-theme="dark"] {
+  --bg: #0B0B0B;
+  --surface: #111111;
+  --surface-2: #1B1B1B;
+  --border: #4A4A4A;
+  --fg: #EDEDED;
+  --muted: #B9BCC1;
+  --accent: #E10606;
+  --accent-fg: #FFFFFF;
+  --danger: #E10606;
+  --focus: #E10606;
+}
+:root[data-brand-theme="dr-claw"][data-theme="light"] {
+  --bg: #F4F4F5;
+  --surface: #FFFFFF;
+  --surface-2: #ECEDEF;
+  --border: #D5D7DB;
+  --fg: #111111;
+  --muted: #5B6270;
+  --accent: #B90000;
+  --accent-fg: #FFFFFF;
+  --danger: #B90000;
+  --focus: #B90000;
+}

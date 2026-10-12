@@ -29,3 +29,9 @@ When integrating this into the repository, place the full folder at:
 `/margin-brand/`
 
 and use it as the canonical source of truth for future branding work.
+
+## Verified source files
+
+The `assets/source/` directory contains editable SVG masters. The `assets/exported/` directory contains real PNG/ICO renders (not mockups). `theme/tokens.css` adds styles only when `data-brand-theme="dr-claw"` is selected. Preserve the existing Classic CSS values and default to Classic for current users.
+
+The `assets/source/wordmark.svg` and `horizontal-lockup.svg` use common system-font fallback for editable SVG text. For font-independent outline lettering, convert the glyphs to vector paths in a design editor before public distribution.
