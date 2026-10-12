@@ -47,8 +47,8 @@ test('each source and theme renders once, one at a time, and errors are kept too
   assert.deepEqual(results[0], { svg: '<svg>a</svg>', width: 10, height: 5 });
   assert.deepEqual(peek('a', 'dark'), results[0], 'a kept result is there at once');
   assert.equal(peek('a', 'other'), undefined);
-  assert.deepEqual(results[4], { error: 'Diagram error: Parse error' });
-  assert.deepEqual(await render('bad', 'dark'), { error: 'Diagram error: Parse error' });
+  assert.deepEqual(results[4], { error: 'This diagram has an error in its code. Click the diagram to see and fix the code.' });
+  assert.deepEqual(await render('bad', 'dark'), { error: 'This diagram has an error in its code. Click the diagram to see and fix the code.' });
   assert.deepEqual(s.calls, ['dark:a', 'dark:b', 'default:a', 'dark:bad']);
   assert.equal(s.maxRunning(), 1);
   assert.equal(s.loads(), 1);
@@ -57,7 +57,7 @@ test('each source and theme renders once, one at a time, and errors are kept too
 test('a failed load shows its own message, is not kept and loads again next time', async () => {
   const s = setup({ fail: 1 });
   const { render, peek } = createRenderer({ load: s.load });
-  assert.deepEqual(await render('a', 'dark'), { error: 'Could not load the diagram tool. It tries again when the diagram shows again.' });
+  assert.deepEqual(await render('a', 'dark'), { error: 'Could not load the diagram tool. Check the connection or sign in again, then click the diagram and click outside it to try again.' });
   assert.equal(peek('a', 'dark'), undefined);
   assert.deepEqual(await render('a', 'dark'), { svg: '<svg>a</svg>', width: 10, height: 5 });
   assert.equal(s.loads(), 2);

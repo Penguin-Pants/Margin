@@ -18,7 +18,7 @@ export function conflictCopyName(name) {
 function failureText(status) {
   if (status === 401) return 'Your session ended. Sign in, then choose again.';
   if (status === 0) return CANNOT_CONNECT;
-  return 'That did not work. Try again.';
+  return 'The server could not do that. Try again.';
 }
 
 /**

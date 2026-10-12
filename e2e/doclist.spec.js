@@ -61,7 +61,7 @@ test('rename updates the list, the open tab and the server (LAY-3)', async ({ pa
   const dialog = page.getByRole('dialog', { name: 'Rename document' });
   await dialog.getByLabel('Name').fill('   ');
   await dialog.getByRole('button', { name: 'Rename' }).click();
-  await expect(dialog.getByRole('alert')).toHaveText('Use 1 to 255 characters and no control characters.');
+  await expect(dialog.getByRole('alert')).toHaveText('Use a name of 1 to 255 characters, with no tabs or line breaks.');
   await dialog.getByLabel('Name').fill('new-name.md');
   await dialog.getByRole('button', { name: 'Rename' }).click();
   await expect(dialog).toBeHidden();

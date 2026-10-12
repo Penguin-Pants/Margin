@@ -96,7 +96,7 @@ test('the Settings dialog reports load and save failures, and Cancel keeps the d
       : route.continue(),
   );
   await dialog.getByRole('button', { name: 'Save' }).click();
-  await expect(dialog.getByRole('alert')).toHaveText('Saving the settings failed. Try again.');
+  await expect(dialog.getByRole('alert')).toHaveText('Could not save the settings. Try again.');
   await page.unroute('**/api/settings');
 
   await dialog.getByRole('button', { name: 'Cancel' }).click();

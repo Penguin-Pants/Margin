@@ -23,7 +23,7 @@ test('other extensions, files over 1 MB and text that is not UTF-8 are rejected 
   assert.deepEqual(droppedText({ name: 'md', bytes: bytes('x') }), { error: 'only .md, .txt and .html files' });
   assert.deepEqual(droppedText({ name: 'big.md', bytes: new Uint8Array(1_048_577) }), { error: 'larger than 1 MB' });
   assert.deepEqual(droppedText({ name: 'max.md', bytes: new Uint8Array(1_048_576).fill(97) }).text.length, 1_048_576);
-  assert.deepEqual(droppedText({ name: 'latin.txt', bytes: new Uint8Array([0x63, 0x61, 0x66, 0xe9]) }), { error: 'not UTF-8 text' });
+  assert.deepEqual(droppedText({ name: 'latin.txt', bytes: new Uint8Array([0x63, 0x61, 0x66, 0xe9]) }), { error: 'the text is not UTF-8; save the file as UTF-8 first' });
 });
 
 const file = (name, text = 'x', size) => {
@@ -81,7 +81,7 @@ test('a name the server rejects is named in the message and the rest still open'
   const f = fakes({ statuses: [400, 201] });
   await openDropped({ files: [file('bad.md'), file('good.md')], ...f });
   assert.deepEqual(f.opened.map(([name]) => name), ['good.md']);
-  assert.deepEqual(f.messages, ['Not opened: bad.md (not accepted by the server).']);
+  assert.deepEqual(f.messages, ['Not opened: bad.md (could not be saved).']);
 });
 
 test('a file that cannot be read is named in the message and the rest still open', async () => {

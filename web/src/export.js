@@ -42,6 +42,16 @@ export function exportFileName(name, extension) {
 
 const TYPES = { md: 'text/markdown', html: 'text/html' };
 
+/** A failure whose message is written for the user. */
+export class ExportError extends Error {}
+
+/**
+ * The text to show for an export failure. Only an ExportError shows its
+ * own message. Any other error is internal, so it gets a generic text.
+ * @param {unknown} err
+ */
+export const exportErrorText = (err) => (err instanceof ExportError ? err.message : 'Export failed. Try again.');
+
 /**
  * The state's whole syntax tree. Export can wait for a parse, which takes
  * about half a second for 1 MB.
@@ -49,7 +59,7 @@ const TYPES = { md: 'text/markdown', html: 'text/html' };
  */
 export function fullTree(state) {
   const tree = ensureSyntaxTree(state, state.doc.length, 10_000);
-  if (!tree) throw new Error('The document could not be read in time. Try again.');
+  if (!tree) throw new ExportError('The document is still being read. Wait a moment, then export again.');
   return tree;
 }
 

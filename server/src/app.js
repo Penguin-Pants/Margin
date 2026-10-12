@@ -13,6 +13,32 @@ import { addSecurityHeaders, securityHeaders } from './security-headers.js';
 import { settingsRoutes } from './settings/routes.js';
 
 const defaultWebRoot = fileURLToPath(new URL('../../dist/web', import.meta.url));
+// A page for a browser that asked for a page and got an error, so it never
+// shows a raw JSON body. It uses only public files.
+const errorPage = (text) => `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Margin</title>
+<script src="/theme-init.js"></script>
+<link rel="stylesheet" href="/styles.css">
+</head>
+<body class="login-page">
+<main class="login-card">
+<h1>Margin</h1>
+<p>${text}</p>
+<p><a href="/">Open Margin</a></p>
+</main>
+</body>
+</html>
+`;
+/** True for a browser page load outside /api/, which shows the reply as a page. */
+const wantsPage = (request) =>
+  (request.method === 'GET' || request.method === 'HEAD') &&
+  !request.url.startsWith('/api/') &&
+  Boolean(request.headers.accept?.includes('text/html'));
+
 const redact = {
   paths: ['headers.cookie', 'headers.authorization', '*.headers.cookie', '*.headers.authorization'],
   censor: '[redacted]',
@@ -32,8 +58,11 @@ export async function buildApp({ config, db, clock = Date.now, logger, webRoot =
     logger: logger === false ? false : { redact, ...logger },
     // Malformed URLs never reach the router or the onSend hook, so this reply
     // sets the security headers itself.
-    frameworkErrors: (error, request, reply) =>
-      reply.code(400).headers(securityHeaders(config.isProduction)).send({ error: 'bad_request' }),
+    frameworkErrors: (error, request, reply) => {
+      reply.code(400).headers(securityHeaders(config.isProduction));
+      if (wantsPage(request)) return reply.type('text/html; charset=utf-8').send(errorPage('This address is not valid.'));
+      return reply.send({ error: 'bad_request' });
+    },
   });
 
   // Every route, including plugin routes, for the gate sweep test.
@@ -49,10 +78,16 @@ export async function buildApp({ config, db, clock = Date.now, logger, webRoot =
     if (status === 415) return reply.code(415).send({ error: 'unsupported_media_type' });
     if (status >= 400 && status < 500) return reply.code(status).send({ error: 'bad_request' });
     request.log.error(error);
-    return reply.code(500).send({ error: 'internal_error' });
+    reply.code(500);
+    if (wantsPage(request)) return reply.type('text/html; charset=utf-8').send(errorPage('Something went wrong. Reload the page to try again.'));
+    return reply.send({ error: 'internal_error' });
   });
   // Unknown routes and missing static files, which @fastify/static hands on.
-  app.setNotFoundHandler((request, reply) => reply.code(404).send({ error: 'not_found' }));
+  app.setNotFoundHandler((request, reply) => {
+    reply.code(404);
+    if (wantsPage(request)) return reply.type('text/html; charset=utf-8').send(errorPage('This page does not exist.'));
+    return reply.send({ error: 'not_found' });
+  });
 
   // Awaited so its cookie parser runs before the gate hook below.
   await app.register(fastifyCookie);

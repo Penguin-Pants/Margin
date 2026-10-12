@@ -242,10 +242,10 @@ export function createTabs({ editor, autosave, api, getStorage, elements, onActi
       }
       return null;
     }
-    if (data?.error === 'invalid_name') return `Use 1 to ${NAME_MAX_LENGTH} characters and no control characters.`;
+    if (data?.error === 'invalid_name') return `Use a name of 1 to ${NAME_MAX_LENGTH} characters, with no tabs or line breaks.`;
     if (status === 404) return 'This document no longer exists.';
     if (status === 0) return CANNOT_CONNECT;
-    return 'Rename failed. Try again.';
+    return 'Could not rename the document. Try again.';
   }
 
   // Ends the name edit. A field that had the focus gives it to its tab.
@@ -422,7 +422,7 @@ export function createTabs({ editor, autosave, api, getStorage, elements, onActi
     if (stale) return 'stale';
     if (status === 204 || status === 404) return 'deleted';
     if (status === 412) return 'changed';
-    showMessage('Delete failed. The document is still in the document list.');
+    showMessage('Could not delete the document. It is still in the document list, so delete it from there.');
     return 'failed';
   }
 
