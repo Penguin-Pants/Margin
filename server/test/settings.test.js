@@ -101,7 +101,7 @@ test('other color values are rejected with the workspace, and nothing is saved (
   }
   const res = await put({ autosaveSeconds: 9, workspaceColors: { personal: 'blue', work: '#333' } });
   assert.deepEqual(res.json(), { error: 'invalid_color', workspace: 'personal' });
-  assert.deepEqual((await get()).json(), { autosaveSeconds: 7, workspaceColors: { personal: '#111', work: '#222' } });
+  assert.deepEqual((await get()).json(), { autosaveSeconds: 7, workspaceColors: { personal: '#111', work: '#222' }, brandTheme: 'classic' });
 });
 
 test('workspaceColors must hold both workspaces and nothing else', async () => {
@@ -114,14 +114,14 @@ test('workspaceColors must hold both workspaces and nothing else', async () => {
 test('a PUT without workspaceColors keeps the colors', async () => {
   await put({ autosaveSeconds: 5, workspaceColors: { personal: '#111', work: '#222' } });
   assert.equal((await put({ autosaveSeconds: 8 })).statusCode, 200);
-  assert.deepEqual((await get()).json(), { autosaveSeconds: 8, workspaceColors: { personal: '#111', work: '#222' } });
+  assert.deepEqual((await get()).json(), { autosaveSeconds: 8, workspaceColors: { personal: '#111', work: '#222' }, brandTheme: 'classic' });
 });
 
 test('an invalid delay with valid colors saves neither (TD-27)', async () => {
   await put({ autosaveSeconds: 7, workspaceColors: { personal: '#111', work: '#222' } });
   const res = await put({ autosaveSeconds: 0, workspaceColors: { personal: '#999', work: '#999' } });
   assert.deepEqual(res.json(), { error: 'invalid_autosave_seconds' });
-  assert.deepEqual((await get()).json(), { autosaveSeconds: 7, workspaceColors: { personal: '#111', work: '#222' } });
+  assert.deepEqual((await get()).json(), { autosaveSeconds: 7, workspaceColors: { personal: '#111', work: '#222' }, brandTheme: 'classic' });
 });
 
 test('a stored color that breaks the rule reads as the default (CLR-3)', async () => {
@@ -130,5 +130,47 @@ test('a stored color that breaks the rule reads as the default (CLR-3)', async (
       .prepare("INSERT INTO settings (key, value) VALUES ('color_work', ?) ON CONFLICT (key) DO UPDATE SET value = excluded.value")
       .run(bad);
     assert.deepEqual(await colors(), { personal: null, work: null }, `stored ${JSON.stringify(bad)}`);
+  }
+});
+
+// Brand theme: Classic or Dr. Claw, one value for every device.
+const brandTheme = async () => (await get()).json().brandTheme;
+
+test('the brand theme is classic by default', async () => {
+  assert.equal(await brandTheme(), 'classic');
+});
+
+test('dr-claw is stored, survives a restart and can go back to classic', async () => {
+  const res = await put({ autosaveSeconds: 5, brandTheme: 'dr-claw' });
+  assert.equal(res.statusCode, 200);
+  assert.equal(res.json().brandTheme, 'dr-claw');
+  await ctx.restart();
+  cookie = await login(ctx.app);
+  assert.equal(await brandTheme(), 'dr-claw');
+  await put({ autosaveSeconds: 5, brandTheme: 'classic' });
+  assert.equal(await brandTheme(), 'classic');
+});
+
+test('a PUT without brandTheme keeps the brand theme', async () => {
+  await put({ autosaveSeconds: 5, brandTheme: 'dr-claw' });
+  assert.equal((await put({ autosaveSeconds: 9 })).statusCode, 200);
+  assert.equal(await brandTheme(), 'dr-claw');
+});
+
+test('other brand themes are rejected and nothing is saved', async () => {
+  await put({ autosaveSeconds: 7, brandTheme: 'dr-claw' });
+  for (const bad of ['blue', 'Classic', '', null, true, 1, {}]) {
+    const res = await put({ autosaveSeconds: 9, brandTheme: bad });
+    assert.deepEqual([res.statusCode, res.json()], [400, { error: 'invalid_brand_theme' }], JSON.stringify(bad));
+  }
+  assert.deepEqual((await get()).json(), { autosaveSeconds: 7, workspaceColors: { personal: null, work: null }, brandTheme: 'dr-claw' });
+});
+
+test('a stored brand theme that breaks the rule reads as classic', async () => {
+  for (const bad of ['blue', '']) {
+    ctx.db
+      .prepare("INSERT INTO settings (key, value) VALUES ('brand_theme', ?) ON CONFLICT (key) DO UPDATE SET value = excluded.value")
+      .run(bad);
+    assert.equal(await brandTheme(), 'classic', `stored ${JSON.stringify(bad)}`);
   }
 });

@@ -1,8 +1,10 @@
 # Margin
 
+**Private notes and code, in one place.** A Dr. Claw Development product.
+
 A private, single-owner text editor in the browser, inspired by Notepad++. Documents live on the server, so they are the same on every device. One password protects the app. It runs as one service on Railway with a persistent volume.
 
-Features: tabs with rename in place, autosave with Save and Save all buttons, plain text editing with line numbers, syntax highlighting for 11 languages, literal find and replace in the current tab, a document list, a keep-or-delete prompt when you close a tab, a warning when another device changed the same document, dark and light themes, and install as a desktop app in Chrome or Edge.
+Features: tabs with rename in place, autosave with Save and Save all buttons, plain text editing with line numbers, syntax highlighting for 11 languages, literal find and replace in the current tab, a document list, a keep-or-delete prompt when you close a tab, a warning when another device changed the same document, dark and light themes, a Classic or Dr. Claw brand theme, and install as a desktop app in Chrome or Edge.
 
 For Markdown: a Visual mode (live preview) with one Visual/Raw toggle, a formatting toolbar, an outline of the headings, word and character counts, Mermaid diagrams, export to `.md`, `.txt`, `.html` and PDF, and drag and drop to open `.md`, `.txt` and `.html` files.
 
@@ -110,7 +112,7 @@ In a Markdown tab, Ctrl+B (Cmd+B) makes text bold, Ctrl+I (Cmd+I) italic and Ctr
 
 - **Personal and Work:** each workspace has its own documents, open tabs and "New NN" numbers. Documents from before workspaces are in Personal. There are always exactly these two.
 - **Switch:** the button left of the theme button shows the active workspace. Click it, or press Enter or Space on it, to switch. All text saves first. If a save fails, the workspace stays the same and a message says why. The window title starts with the workspace name, for example "Work - Margin". Each browser opens its last workspace.
-- **Shared by both:** the password, sessions, theme, Visual or Raw mode, the outline panel, the count mode and the autosave delay.
+- **Shared by both:** the password, sessions, theme, brand theme, Visual or Raw mode, the outline panel, the count mode and the autosave delay.
 - **Move:** in the Documents list, "Move to Work" or "Move to Personal" moves a document with its name, text and date. An open tab saves first, then closes.
 - **Colors:** the tab strip and the switch show the workspace color. Personal keeps the theme look. Work starts teal (`#0f766e`). Inactive tabs get black or white text, whichever is easier to read.
 - **Rollback:** the upgrade adds a `workspace` column to the documents table. A build from before workspaces still starts on the upgraded database, but its list shows Personal and Work documents together. No data is lost. Prefer a fix in a new build.
@@ -121,6 +123,8 @@ In a Markdown tab, Ctrl+B (Cmd+B) makes text bold, Ctrl+I (Cmd+I) italic and Ctr
 Account > Settings sets the autosave delay: a whole number of seconds from 1 to 60, default 5. A document saves that many seconds after the last edit, and during nonstop typing no later than that many seconds after the first unsaved edit. The server stores the value, so it applies on every device after a reload.
 
 The same dialog sets one color per workspace: `#RGB` or `#RRGGBB`, in any letter case. Leave a field empty for the default color. The server stores the colors, so other devices show a change after a reload. Right after a page load, a custom color can show the workspace's default color for a moment.
+
+The **Dr. Claw theme** switch sets the brand theme. Off is **Classic**, the original look with the blue accent. On is **Dr. Claw**, the Margin Redline look: black and charcoal surfaces with a red accent. Classic is the default, also for owners who never set it. Save applies the choice at once, without a reload, and open tabs and unsaved text stay as they are. The brand theme is independent of the Light theme / Dark theme button, so there are four looks: Classic Dark, Classic Light, Dr. Claw Dark and Dr. Claw Light. The server stores the choice, so other devices show it after a reload. Each browser also keeps a copy, so the page and the sign-in page show it before first paint.
 
 ## Known limits
 
@@ -146,7 +150,18 @@ Export saves one document at a time. Use Railway volume backups to protect `/dat
 
 ## Brand
 
-`margin-brand/` holds the approved Margin icons and the brand guide (`BRAND.md`). `web/icons/` holds copies of the icons that the app serves. `web/test/brand.test.js` fails when a copy is different from its source or when `web/icons/` holds an icon that no page or manifest uses. To change an icon, change it in `margin-brand/` first. Then copy it to `web/icons/`.
+`margin-brand/` is the source for the Margin brand: the identity (`README.md`), the design system (`design.md`), the usage rules (`brand-guidelines.md`), the Dr. Claw design tokens (`theme/tokens.css`) and the icons (`assets/`). The app serves copies of some icons:
+
+| Served file | Source in `margin-brand/` |
+|-------------|---------------------------|
+| `web/favicon.ico` | `assets/exported/favicon.ico` |
+| `web/favicon.svg` | `assets/source/favicon.svg` |
+| `web/apple-touch-icon.png` | `assets/exported/apple-touch-icon.png` |
+| `web/icons/icon-192.png`, `icon-512.png`, `icon-maskable-512.png` | `assets/exported/` |
+
+`web/test/brand.test.js` fails when a copy is different from its source or when `web/icons/` holds an icon that the manifest does not use. To change an icon, change it in `margin-brand/` first. Then copy it. The Dr. Claw tokens are in `web/styles.css`, after the Classic tokens. Dr. Claw Dark uses `#FF4040` for red text, because `#E10606` on charcoal is below 4.5:1.
+
+Some technical names keep the old Notepad name, because a change would need a data migration and gives no user benefit: the database file `notepad.db`, the `pn.` prefix of the browser storage keys and the marker in `scripts/patch-lezer-markdown.js`.
 
 ## Third-party notices
 

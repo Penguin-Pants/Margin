@@ -28,6 +28,62 @@
   --focus: #0b62d6;
 }
 
+/* Brand theme (Settings): data-brand-theme on <html> is "classic" (the tokens
+   above, unchanged) or "dr-claw" (Margin Redline, margin-brand/theme/tokens.css).
+   It is independent of data-theme, so each brand has a dark and a light variant.
+   --accent-text is the accent where it colors text. Classic uses the accent.
+   Dr. Claw dark uses a lighter red there, because #E10606 on charcoal is
+   below 4.5:1 for small text. */
+:root {
+  --accent-text: var(--accent);
+}
+
+:root[data-brand-theme="dr-claw"][data-theme="dark"] {
+  --bg: #0b0b0b;
+  --surface: #111111;
+  --surface-2: #1b1b1b;
+  --border: #4a4a4a;
+  --fg: #ededed;
+  --muted: #b9bcc1;
+  --accent: #e10606;
+  --accent-fg: #ffffff;
+  --accent-text: #ff4040;
+  --danger: #ff4040;
+  --focus: #e10606;
+}
+
+:root[data-brand-theme="dr-claw"][data-theme="light"] {
+  --bg: #f4f4f5;
+  --surface: #ffffff;
+  --surface-2: #ecedef;
+  --border: #d5d7db;
+  --fg: #111111;
+  --muted: #5b6270;
+  --accent: #b90000;
+  --accent-fg: #ffffff;
+  --danger: #b90000;
+  --focus: #b90000;
+}
+
+/* Dr. Claw dark puts the editor on the charcoal surface instead of the One
+   Dark blue-gray. Syntax colors stay. */
+:root[data-brand-theme="dr-claw"][data-theme="dark"] .cm-editor {
+  background-color: var(--surface);
+}
+
+:root[data-brand-theme="dr-claw"][data-theme="dark"] .cm-editor .cm-gutters {
+  background-color: var(--surface);
+  border-right: 1px solid var(--border);
+}
+
+:root[data-brand-theme="dr-claw"][data-theme="dark"] .cm-editor .cm-activeLineGutter {
+  background-color: var(--surface-2);
+}
+
+:root[data-brand-theme="dr-claw"][data-theme="dark"] .cm-editor .cm-cursor {
+  border-left-color: var(--fg);
+}
+
 /* Workspace color of the tab strip and the switch (v3 CLR-1, CLR-6, TD-36).
    Personal keeps today's look. main.js sets the three variables inline on
    <html> when the active workspace has a stored color. */
@@ -303,6 +359,21 @@ dialog h2 {
 
 .dialog-form input {
   margin-bottom: 6px;
+}
+
+/* An on/off field (a checkbox with role="switch"), with its label on the right. */
+.dialog-switch {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.dialog-form .dialog-switch input {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: var(--accent);
 }
 
 .dialog-buttons {
@@ -585,7 +656,7 @@ button.danger {
 #mode-toggle[aria-pressed="true"],
 #word-wrap[aria-pressed="true"] {
   border-color: var(--accent);
-  color: var(--accent);
+  color: var(--accent-text);
 }
 
 /* Visual mode (MDV-3 to MDV-8). Prose uses the interface font, code stays mono. */
@@ -632,7 +703,7 @@ button.danger {
 }
 
 .cm-md-visual .cm-md-link {
-  color: var(--accent);
+  color: var(--accent-text);
   text-decoration: underline;
 }
 
@@ -723,7 +794,7 @@ button.danger {
 }
 
 .outline-entry[aria-current="location"] {
-  color: var(--accent);
+  color: var(--accent-text);
   box-shadow: inset 2px 0 0 var(--accent);
 }
 
@@ -742,7 +813,7 @@ button.danger {
 
 #count-syntax[aria-pressed="true"] {
   border-color: var(--accent);
-  color: var(--accent);
+  color: var(--accent-text);
 }
 
 #selection-counts[hidden],

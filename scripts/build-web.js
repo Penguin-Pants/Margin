@@ -65,7 +65,7 @@ for (const dir of [...packageDirs].sort()) {
 await writeFile(join(outDir, 'THIRD-PARTY-NOTICES.txt'), `${notices.join(`\n${'-'.repeat(72)}\n`)}\n`);
 
 const pages = (await readdir(webDir)).filter((name) => name.endsWith('.html'));
-for (const name of [...pages, 'styles.css', 'manifest.webmanifest']) {
+for (const name of [...pages, 'styles.css', 'manifest.webmanifest', 'favicon.ico', 'favicon.svg', 'apple-touch-icon.png']) {
   await copyFile(join(webDir, name), join(outDir, name));
 }
 await cp(join(webDir, 'icons'), join(outDir, 'icons'), { recursive: true });

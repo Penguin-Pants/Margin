@@ -24,7 +24,7 @@ import { openFind, openReplace } from './search-panel.js';
 import { modName, setupShortcuts } from './shortcuts.js';
 import { setupSessionRecovery } from './session.js';
 import { createTabs } from './tabs.js';
-import { animateThemeSwitch, createTheme } from './theme.js';
+import { animateThemeSwitch, createTheme, setBrandTheme } from './theme.js';
 import { otherWorkspace, showWorkspace, WORKSPACE, WORKSPACE_NAMES } from './workspace.js';
 import { textColorOn } from './workspace-color.js';
 import { createExclusive, saveAll, switchWorkspace } from './workspace-switch.js';
@@ -93,8 +93,8 @@ $('logout').addEventListener('click', async () => {
   else showMessage('Could not sign out. Try again.');
 });
 
-// Settings (SAV-2 to SAV-4): the autosave delay, one value on the server for
-// every device. It is read at startup, after a re-login and when the dialog
+// Settings (SAV-2 to SAV-4): the autosave delay, the workspace colors and the
+// brand theme, one value each on the server for every device. It is read at startup, after a re-login and when the dialog
 // opens. The newest read or save wins, so a slow read cannot undo it.
 let delayRequest = 0;
 async function loadSettings() {
@@ -103,11 +103,14 @@ async function loadSettings() {
   if (result.status === 200 && request === delayRequest) applySettings(result.data);
   return result;
 }
-function applySettings({ autosaveSeconds, workspaceColors: colors }) {
+function applySettings({ autosaveSeconds, workspaceColors: colors, brandTheme }) {
   autosave.setDelay(autosaveSeconds * 1000);
   // A v2 server (a rollback, R15) sends no colors: both keep their default.
   workspaceColors = colors ?? DEFAULT_COLORS;
   applyWorkspaceColor();
+  // An older server sends no brand theme: Classic. Only CSS variables change,
+  // so open tabs and unsaved edits stay as they are.
+  setBrandTheme({ getStorage: () => localStorage, root: document.documentElement, value: brandTheme });
 }
 // One Settings dialog at a time, also while its first read is slow.
 let settingsOpen = false;
@@ -138,15 +141,17 @@ async function showSettings() {
         // A v2 server (a rollback, R15) sends no colors.
         value: current.data.workspaceColors?.[id] ?? '',
       })),
+      { name: 'brandTheme', label: 'Dr. Claw theme', type: 'switch', value: current.data.brandTheme === 'dr-claw' ? 'on' : 'off' },
     ],
     submitLabel: 'Save',
-    onSubmit: async ({ seconds, personal, work }) => {
+    onSubmit: async ({ seconds, personal, work, brandTheme }) => {
       // The server checks the rules (a whole number from 1 to 60 and #RGB or
       // #RRGGBB). '' becomes 0 and text becomes NaN, which it rejects too.
       const color = (value) => value.trim() || null;
       const { status, data } = await api.saveSettings({
         autosaveSeconds: Number(seconds.trim()),
         workspaceColors: { personal: color(personal), work: color(work) },
+        brandTheme: brandTheme === 'on' ? 'dr-claw' : 'classic',
       });
       if (status === 200) {
         delayRequest += 1;

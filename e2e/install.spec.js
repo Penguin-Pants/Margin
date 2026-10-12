@@ -34,7 +34,7 @@ test('the login and editor pages link the manifest and theme color', async ({ pa
 test('the login and editor pages link the Margin icons, and each loads without a session', async ({ page, request, server }) => {
   const icons = () =>
     page.locator('link[rel="icon"], link[rel="apple-touch-icon"]').evaluateAll((links) => links.map((link) => `${link.rel} ${link.getAttribute('href')}`));
-  const expected = ['icon /icons/favicon.ico', 'icon /icons/icon.svg', 'apple-touch-icon /icons/apple-touch-icon.png'];
+  const expected = ['icon /favicon.ico', 'icon /favicon.svg', 'apple-touch-icon /apple-touch-icon.png'];
   await page.goto('/login');
   await expect(page).toHaveTitle('Sign in - Margin');
   expect(await icons()).toEqual(expected);
