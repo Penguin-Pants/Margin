@@ -11,6 +11,7 @@ import {
   createSession,
   deleteOtherSessions,
   deleteSession,
+  purgeExpiredSessions,
   SESSION_COOKIE,
   SESSION_TTL_MS,
   sessionCookieOptions,
@@ -47,7 +48,11 @@ export async function authRoutes(app, { db, config, clock }) {
       return reply.code(401).send({ error: 'invalid_credentials' });
     }
     limiter.recordSuccess(ip);
-    const token = createSession(db, clock());
+    // Expired sessions go here as well as at startup, so a long uptime
+    // never piles them up (audit C6).
+    const now = clock();
+    purgeExpiredSessions(db, now);
+    const token = createSession(db, now);
     reply.setCookie(SESSION_COOKIE, token, { ...cookieOptions, maxAge: SESSION_TTL_MS / 1000 });
     return reply.code(204).send();
   });

@@ -1,15 +1,13 @@
 // Document storage (BUILD_PLAN.md section 2.6). Every query names the
 // workspace (v3 TD-24): a document of the other workspace reads as missing.
 import { randomUUID } from 'node:crypto';
-import { extensionOf, NAME_MAX_LENGTH, NEW_NAME, newName } from '../../../shared/contract.js';
+import { extensionOf, NEW_NAME, newName } from '../../../shared/contract.js';
 import { transaction } from '../db.js';
 
 // node:sqlite (seen in Node 24.13) cuts a bound TEXT value at its first NUL
 // character, so content is stored as UTF-8 bytes (a BLOB in the TEXT column).
 const encodeContent = (text) => Buffer.from(text, 'utf8');
 const decodeContent = (value) => (typeof value === 'string' ? value : Buffer.from(value).toString('utf8'));
-
-const CONTROL_CHARS = /[\u0000-\u001f\u007f-\u009f]/;
 
 /**
  * @typedef {object} DocumentMeta
@@ -28,31 +26,6 @@ const toMeta = (row) => ({
   language: row.language,
   updatedAt: row.updated_at,
 });
-
-/**
- * Returns the trimmed name, or null when it breaks the name rule:
- * 1 to NAME_MAX_LENGTH characters after trimming and no control characters.
- * @param {unknown} value
- */
-export function normalizeName(value) {
-  if (typeof value !== 'string') return null;
-  const name = value.trim();
-  const length = [...name].length;
-  return length >= 1 && length <= NAME_MAX_LENGTH && !CONTROL_CHARS.test(name) ? name : null;
-}
-
-/**
- * The stored name of a rename (v4 REN-5, REN-7), or null when it breaks the
- * name rule: trimmed, trailing dots removed, then `.md` appended when it has
- * no extension (EXT-1). The limit counts the appended `.md`.
- * @param {unknown} value
- */
-export function renamedName(value) {
-  if (typeof value !== 'string') return null;
-  const name = value.trim().replace(/[.\s]+$/u, '');
-  if (name === '') return null;
-  return normalizeName(extensionOf(name) ? name : `${name}.md`);
-}
 
 /**
  * Newest first. No content.
@@ -139,7 +112,7 @@ export function saveContent(db, { workspace, id, content, expectedVersion, now }
  * @param {string} workspace The document's workspace now.
  * @param {string} id
  * @param {{ name?: string, language?: string | null, workspace?: string }} changes Already validated.
- *   The name comes from renamedName.
+ *   The name comes from renamedName (shared/contract.js).
  * @param {number} now
  * @returns {DocumentMeta | undefined} undefined when the document does not exist in the workspace.
  */
@@ -159,11 +132,21 @@ export function updateMeta(db, workspace, id, { name, language, workspace: targe
 }
 
 /**
+ * Deletes a document. With expectedVersion, only while the stored version
+ * still equals it, so text saved on another device stays (audit C1).
  * @param {import('node:sqlite').DatabaseSync} db
  * @param {string} workspace
  * @param {string} id
- * @returns {boolean} false when the document does not exist in the workspace.
+ * @param {number} [expectedVersion]
+ * @returns {{ ok: true } | { ok: false, currentVersion: number | null }}
+ *   currentVersion is null when the document does not exist in the workspace.
  */
-export function deleteDocument(db, workspace, id) {
-  return db.prepare('DELETE FROM documents WHERE id = ? AND workspace = ?').run(id, workspace).changes === 1;
+export function deleteDocument(db, workspace, id, expectedVersion) {
+  const { changes } =
+    expectedVersion === undefined
+      ? db.prepare('DELETE FROM documents WHERE id = ? AND workspace = ?').run(id, workspace)
+      : db.prepare('DELETE FROM documents WHERE id = ? AND workspace = ? AND version = ?').run(id, workspace, expectedVersion);
+  if (changes === 1) return { ok: true };
+  const row = db.prepare('SELECT version FROM documents WHERE id = ? AND workspace = ?').get(id, workspace);
+  return { ok: false, currentVersion: row?.version ?? null };
 }

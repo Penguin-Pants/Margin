@@ -100,3 +100,19 @@ test('the empty state button opens the document list', async ({ page, api }) => 
   await expect(page.locator('#doclist')).toBeVisible();
   await expect(rows(page).locator('.doc-name')).toHaveText(['from-empty.txt']);
 });
+
+test('a window focus with the list open reads the list once and shows a document made elsewhere (audit C2)', async ({ page, api }) => {
+  await createDoc(api, 'first.md');
+  await login(page);
+  await openList(page);
+  await expect(rows(page)).toHaveCount(1);
+  await createDoc(api, 'made elsewhere.md');
+  const reads = [];
+  page.on('request', (req) => {
+    if (req.method() === 'GET' && new URL(req.url()).pathname === '/api/documents') reads.push(req.url());
+  });
+  await page.evaluate(() => window.dispatchEvent(new Event('focus')));
+  await expect(rows(page)).toHaveCount(2);
+  await page.waitForTimeout(300);
+  expect(reads).toHaveLength(1);
+});

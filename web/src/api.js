@@ -107,8 +107,13 @@ export const api = {
    * @param {'personal' | 'work'} [target] Acts on that workspace instead. Never stale.
    */
   updateDocument: (id, changes, target) => docCall('PATCH', docPath(id), { json: changes }, target),
-  /** @param {string} id @param {'personal' | 'work'} [target] Acts on that workspace instead. Never stale. */
-  deleteDocument: (id, target) => docCall('DELETE', docPath(id), {}, target),
+  /**
+   * @param {string} id
+   * @param {'personal' | 'work'} [target] Acts on that workspace instead. Never stale.
+   * @param {number} [version] Deletes only at this version, else 412 (audit C1).
+   */
+  deleteDocument: (id, target, version) =>
+    docCall('DELETE', docPath(id), version === undefined ? {} : { headers: { 'If-Match': String(version) } }, target),
   getSettings: () => call('GET', '/api/settings'),
   /** @param {{ autosaveSeconds: number, workspaceColors?: { personal: string | null, work: string | null } }} settings */
   saveSettings: (settings) => call('PUT', '/api/settings', { json: settings }),

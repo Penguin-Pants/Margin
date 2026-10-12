@@ -1,9 +1,9 @@
 // Document API (BUILD_PLAN.md section 2.7). Content travels as text/plain
 // with an exact byte limit (TD-7). Every route acts on the workspace that its
 // `workspace` query value names, Personal by default (v3 TD-23).
-import { CONTENT_LIMIT_BYTES, LANGUAGE_IDS, WORKSPACES } from '../../../shared/contract.js';
+import { CONTENT_LIMIT_BYTES, LANGUAGE_IDS, normalizeName, renamedName, WORKSPACES } from '../../../shared/contract.js';
 import { parseWorkspace } from '../workspaces.js';
-import { createDocument, deleteDocument, getDocument, listDocuments, normalizeName, renamedName, saveContent, updateMeta } from './repo.js';
+import { createDocument, deleteDocument, getDocument, listDocuments, saveContent, updateMeta } from './repo.js';
 
 /**
  * @param {import('fastify').FastifyInstance} app
@@ -42,8 +42,8 @@ export async function documentRoutes(app, { db, clock }) {
 
   // TD-6: If-Match carries the version the client last saw.
   app.put('/api/documents/:id/content', { bodyLimit: CONTENT_LIMIT_BYTES }, async (request, reply) => {
-    const ifMatch = request.headers['if-match'];
-    if (typeof ifMatch !== 'string' || !/^\d+$/.test(ifMatch)) {
+    const expectedVersion = ifMatchVersion(request);
+    if (expectedVersion === undefined || expectedVersion === null) {
       return reply.code(428).send({ error: 'version_required' });
     }
     const content = textBody(request, { optional: false });
@@ -52,7 +52,7 @@ export async function documentRoutes(app, { db, clock }) {
       workspace: request.workspace,
       id: request.params.id,
       content,
-      expectedVersion: Number(ifMatch),
+      expectedVersion,
       now: clock(),
     });
     if (result.ok) return { version: result.version, updatedAt: result.updatedAt };
@@ -87,10 +87,28 @@ export async function documentRoutes(app, { db, clock }) {
     return meta;
   });
 
+  // If-Match is optional here (audit C1). With it, a document that another
+  // device saved since gets 412, as a save does. Without it, the delete
+  // always happens: the user chose Delete permanently.
   app.delete('/api/documents/:id', async (request, reply) => {
-    if (!deleteDocument(db, request.workspace, request.params.id)) return reply.code(404).send({ error: 'not_found' });
-    return reply.code(204).send();
+    const expectedVersion = ifMatchVersion(request);
+    if (expectedVersion === null) return reply.code(428).send({ error: 'version_required' });
+    const result = deleteDocument(db, request.workspace, request.params.id, expectedVersion);
+    if (result.ok) return reply.code(204).send();
+    if (result.currentVersion === null) return reply.code(404).send({ error: 'not_found' });
+    return reply.code(412).send({ error: 'version_conflict', currentVersion: result.currentVersion });
   });
+}
+
+/**
+ * The version in If-Match: a number, undefined when there is no If-Match, or
+ * null when it is not plain digits.
+ * @param {import('fastify').FastifyRequest} request
+ */
+function ifMatchVersion(request) {
+  const value = request.headers['if-match'];
+  if (value === undefined) return undefined;
+  return typeof value === 'string' && /^\d+$/.test(value) ? Number(value) : null;
 }
 
 /**

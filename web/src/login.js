@@ -1,6 +1,6 @@
 // Login page (T10).
 import { api } from './api.js';
-import { loginErrorText } from './login-errors.js';
+import { loginErrorText } from './error-text.js';
 
 const form = /** @type {HTMLFormElement} */ (document.getElementById('login-form'));
 const input = /** @type {HTMLInputElement} */ (document.getElementById('password'));

@@ -15,7 +15,7 @@ const savedFetch = globalThis.fetch;
 function fakeFetch() {
   return (url, init) =>
     new Promise((resolve, reject) => {
-      calls.push({ url, method: init.method });
+      calls.push({ url, method: init.method, headers: init.headers });
       pending.push({ resolve, reject });
     });
 }
@@ -132,4 +132,11 @@ test('a 401 before a switch still emits session-expired', async () => {
   answer(0, 401, { error: 'unauthorized' });
   assert.equal((await result).status, 401);
   assert.equal(expired, 1);
+});
+
+test('a delete can name the version it saw in If-Match, and sends none without it (audit C1)', () => {
+  api.deleteDocument('id1', undefined, 4);
+  api.deleteDocument('id2');
+  assert.equal(calls[0].headers['If-Match'], '4');
+  assert.equal(calls[1].headers['If-Match'], undefined);
 });

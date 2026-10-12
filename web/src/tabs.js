@@ -2,8 +2,9 @@
 // localStorage (v3 TD-31). Content loads on first activation. Clean tabs
 // refresh from the server on window focus and on tab activation (TD-15).
 
-import { baseName, NAME_MAX_LENGTH, NEW_NAME } from '../../shared/contract.js';
+import { baseName, NAME_MAX_LENGTH, NEW_NAME, renamedName } from '../../shared/contract.js';
 import { choose } from './dialogs.js';
+import { CANNOT_CONNECT } from './error-text.js';
 import { languageSupport, resolveLanguage } from './languages.js';
 import { modName } from './shortcuts.js';
 
@@ -44,12 +45,13 @@ export function writeOpenTabs(getStorage, state, key) {
 }
 
 /**
- * True when a typed name is the stored one after trimming, so a rename
- * sends nothing (v4 REN-6). The server would append `.md` to it.
+ * True when a typed name is the stored one after trimming, or when the
+ * server would store it as the stored one (`notes` for `notes.md`), so a
+ * rename sends nothing (v4 REN-6, audit C3).
  * @param {string} typed
  * @param {string} current
  */
-export const isUnchangedName = (typed, current) => typed.trim() === current;
+export const isUnchangedName = (typed, current) => typed.trim() === current || renamedName(typed) === current;
 
 /**
  * Decides what a refresh does (TD-15). Only clean tabs change: a dirty tab
@@ -242,7 +244,7 @@ export function createTabs({ editor, autosave, api, getStorage, elements, onActi
     }
     if (data?.error === 'invalid_name') return `Use 1 to ${NAME_MAX_LENGTH} characters and no control characters.`;
     if (status === 404) return 'This document no longer exists.';
-    if (status === 0) return 'Cannot connect to the server. Try again.';
+    if (status === 0) return CANNOT_CONNECT;
     return 'Rename failed. Try again.';
   }
 
@@ -408,11 +410,20 @@ export function createTabs({ editor, autosave, api, getStorage, elements, onActi
     render();
   }
 
-  // The tab is already closed, so no pending save can reach the document.
-  async function deleteOnServer(id) {
-    const { status, stale } = await api.deleteDocument(id);
-    if (stale) return;
-    if (status !== 204 && status !== 404) showMessage('Delete failed. The document is still in the document list.');
+  /**
+   * The tab is already closed, so no pending save can reach the document.
+   * With `version`, a document saved elsewhere since stays (audit C1).
+   * @param {string} id
+   * @param {number} [version]
+   * @returns {Promise<'deleted' | 'changed' | 'failed' | 'stale'>}
+   */
+  async function deleteOnServer(id, version) {
+    const { status, stale } = await api.deleteDocument(id, undefined, version);
+    if (stale) return 'stale';
+    if (status === 204 || status === 404) return 'deleted';
+    if (status === 412) return 'changed';
+    showMessage('Delete failed. The document is still in the document list.');
+    return 'failed';
   }
 
   /** Replaces a tab's state with server content. Resets its autosave. */
@@ -563,6 +574,7 @@ export function createTabs({ editor, autosave, api, getStorage, elements, onActi
       const tab = find(id);
       if (!tab) return false;
       let content = controller.content(id);
+      let version = autosave.version(id);
       if (content === null) {
         const { status, data, stale } = await api.getDocument(id);
         if (stale) return false;
@@ -575,12 +587,23 @@ export function createTabs({ editor, autosave, api, getStorage, elements, onActi
           return false;
         }
         content = data.content;
+        version = data.version;
       }
 
       if (content === '' && NEW_NAME.test(tab.name)) {
+        // Unsaved text saves first, so the version below is the server's.
+        if (!isClean(tab)) {
+          if (!(await autosave.flush(id))) return false;
+          version = autosave.version(id);
+        }
+        // The delete names the version this tab saw. Text that another
+        // device saved since gets 412: the tab opens again with that text,
+        // and the close asks (audit C1).
         removeTab(id);
-        await deleteOnServer(id);
-        return true;
+        const result = await deleteOnServer(id, version);
+        if (result !== 'changed') return true;
+        await controller.open(id, tab.name);
+        return find(id) ? controller.close(id) : true;
       }
 
       const answer = await choose({
@@ -699,14 +722,19 @@ export function createTabs({ editor, autosave, api, getStorage, elements, onActi
       return tab ? languageOf(tab) : null;
     },
 
-    /** Applies server metadata and reloads clean tabs that changed elsewhere. */
-    async refresh() {
+    /**
+     * Applies server metadata and reloads clean tabs that changed elsewhere.
+     * @param {{ onList?: (list: import('./api.js').DocumentMeta[]) => void }} [options]
+     *   onList gets the list as soon as it is read (audit C2).
+     */
+    async refresh({ onList } = {}) {
       // Only tabs that were open before the list was read count. A tab opened
       // during the read (New, a drop) is not in the list yet, but not gone.
       const known = new Set(tabs.map((tab) => tab.id));
       const started = metaClock;
       const { status, data } = await api.listDocuments();
       if (status !== 200) return;
+      onList?.(data);
       const plan = planRefresh(
         tabs
           .filter((tab) => known.has(tab.id))

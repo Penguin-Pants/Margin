@@ -12,7 +12,7 @@ import { createEditor } from './editor.js';
 import { emit } from './events.js';
 import { download, exportContent, exportFormats, fullTree, printPage } from './export.js';
 import { LANGUAGES } from './languages.js';
-import { loginErrorText } from './login-errors.js';
+import { CANNOT_CONNECT, loginErrorText } from './error-text.js';
 import { mermaidSources } from './markdown-html.js';
 import { createCounter, createSummary } from './markdown-text.js';
 import { createToolbar } from './markdown-toolbar.js';
@@ -155,7 +155,7 @@ async function showSettings() {
       }
       if (data?.error === 'invalid_autosave_seconds') return 'Use a whole number from 1 to 60.';
       if (data?.error === 'invalid_color') return `Use #RGB or #RRGGBB for the ${WORKSPACE_NAMES[data.workspace]} color.`;
-      if (status === 0) return 'Cannot connect to the server. Try again.';
+      if (status === 0) return CANNOT_CONNECT;
       return 'Saving the settings failed. Try again.';
     },
   });
@@ -179,7 +179,7 @@ $('change-password').addEventListener('click', async () => {
       if (data?.error === 'weak_password') return 'The new password must have 12 to 256 characters.';
       // Wrong current passwords count in the login limiter.
       if (status === 429) return loginErrorText(status, data);
-      if (status === 0) return 'Cannot connect to the server. Try again.';
+      if (status === 0) return CANNOT_CONNECT;
       return 'Password change failed. Try again.';
     },
   });
@@ -610,9 +610,7 @@ setupShortcuts({
 $('new-doc').title = `New document (${modName()}+N in the installed app, Alt+N)`;
 $('find').title = `Find (${modName()}+F) and replace (${modName()}+H)`;
 $('save').title = `Save now (${modName()}+S)`;
-// TD-15: clean tabs and the open document list refresh on window focus.
-window.addEventListener('focus', () => {
-  tabs.refresh();
-  doclist.refresh();
-});
+// TD-15: clean tabs and the open document list refresh on window focus,
+// from one list read (audit C2).
+window.addEventListener('focus', () => tabs.refresh({ onList: (list) => doclist.refresh(list) }));
 tabs.boot();
