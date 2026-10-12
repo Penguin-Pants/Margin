@@ -97,3 +97,12 @@ test('a session lifetime does not slide with use', async () => {
 test('an unknown session token returns 401', async () => {
   assert.equal(await sessionStatus('pn_session=not-a-real-token'), 401);
 });
+
+test('a sign-in deletes the expired sessions, so they do not pile up between restarts (audit C6)', async () => {
+  await login(ctx.app);
+  now += SESSION_TTL_MS + 1;
+  const count = () => ctx.db.prepare('SELECT COUNT(*) AS n FROM sessions').get().n;
+  assert.equal(count(), 1);
+  await login(ctx.app);
+  assert.equal(count(), 1);
+});

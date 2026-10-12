@@ -60,13 +60,15 @@ export async function buildApp({ config, db, clock = Date.now, logger, webRoot =
   addAuthGate(app, { db, clock });
 
   // Chunk names hold a content hash, so a chunk never changes. The browser
-  // keeps it, which saves a check per chunk on each page load. Only the
-  // browser, because chunks need a session.
+  // keeps it, which saves a check per chunk on each page load. Other files
+  // revalidate each time. All are private: most need a session, so a shared
+  // cache must never keep one (audit C4).
   const chunks = resolve(webRoot, 'chunks') + sep;
   app.register(fastifyStatic, {
     root: webRoot,
+    cacheControl: false,
     setHeaders: (reply, path) => {
-      if (path.startsWith(chunks)) reply.header('cache-control', 'private, max-age=31536000, immutable');
+      reply.header('cache-control', path.startsWith(chunks) ? 'private, max-age=31536000, immutable' : 'private, no-cache');
     },
   });
   app.get('/login', (request, reply) => reply.sendFile('login.html'));

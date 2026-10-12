@@ -59,6 +59,16 @@ test('chunks, whose names hold a content hash, are cached for a year in the brow
   assert.equal(noSession.statusCode, 401);
 });
 
+test('other static files are private and revalidate, so no shared cache keeps a gated file (audit C4)', async () => {
+  ctx = await createTestApp();
+  const cookie = await login(ctx.app);
+  for (const url of ['/', '/main.js', '/styles.css', '/login']) {
+    const res = await ctx.app.inject({ method: 'GET', url, headers: { cookie } });
+    assert.equal(res.statusCode, 200, url);
+    assert.equal(res.headers['cache-control'], 'private, no-cache', url);
+  }
+});
+
 test('production adds HSTS and the Secure cookie flag', async () => {
   ctx = await createTestApp({ env: { NODE_ENV: 'production' } });
   const res = await ctx.app.inject({
