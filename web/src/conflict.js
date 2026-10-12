@@ -4,6 +4,7 @@
 // failed step shows its error in the dialog instead of losing text.
 import { NAME_MAX_LENGTH } from '../../shared/contract.js';
 import { choose } from './dialogs.js';
+import { CANNOT_CONNECT } from './error-text.js';
 import { on } from './events.js';
 
 const COPY_SUFFIX = ' (conflict copy)';
@@ -16,7 +17,7 @@ export function conflictCopyName(name) {
 /** @param {number} status */
 function failureText(status) {
   if (status === 401) return 'Your session ended. Sign in, then choose again.';
-  if (status === 0) return 'Cannot connect to the server. Try again.';
+  if (status === 0) return CANNOT_CONNECT;
   return 'That did not work. Try again.';
 }
 

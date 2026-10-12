@@ -4,6 +4,7 @@
 
 import { baseName, NAME_MAX_LENGTH, NEW_NAME, renamedName } from '../../shared/contract.js';
 import { choose } from './dialogs.js';
+import { CANNOT_CONNECT } from './error-text.js';
 import { languageSupport, resolveLanguage } from './languages.js';
 import { modName } from './shortcuts.js';
 
@@ -243,7 +244,7 @@ export function createTabs({ editor, autosave, api, getStorage, elements, onActi
     }
     if (data?.error === 'invalid_name') return `Use 1 to ${NAME_MAX_LENGTH} characters and no control characters.`;
     if (status === 404) return 'This document no longer exists.';
-    if (status === 0) return 'Cannot connect to the server. Try again.';
+    if (status === 0) return CANNOT_CONNECT;
     return 'Rename failed. Try again.';
   }
 

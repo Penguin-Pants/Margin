@@ -1,5 +1,8 @@
-// Error texts for a failed sign-in, shared by the login page and the
-// re-login dialog. They are generic: never more than "wrong password" or "wait".
+// Error texts that more than one place shows (audit C5). Sign-in texts are
+// generic: never more than "wrong password" or "wait".
+
+/** A request that got no reply (status 0). */
+export const CANNOT_CONNECT = 'Cannot connect to the server. Try again.';
 
 /**
  * @param {number} status HTTP status, or 0 for a network failure.
@@ -11,6 +14,6 @@ export function loginErrorText(status, data) {
     const minutes = Math.max(1, Math.ceil((data?.retryAfterSeconds ?? 900) / 60));
     return `Too many failed attempts. Wait ${minutes} ${minutes === 1 ? 'minute' : 'minutes'}, then try again.`;
   }
-  if (status === 0) return 'Cannot connect to the server. Try again.';
+  if (status === 0) return CANNOT_CONNECT;
   return 'Sign-in failed. Try again.';
 }

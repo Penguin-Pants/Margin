@@ -3,7 +3,7 @@
 import { api } from './api.js';
 import { formDialog } from './dialogs.js';
 import { on } from './events.js';
-import { loginErrorText } from './login-errors.js';
+import { loginErrorText } from './error-text.js';
 
 /**
  * @param {{ onSignedIn: () => void }} options onSignedIn runs after a successful sign-in.
