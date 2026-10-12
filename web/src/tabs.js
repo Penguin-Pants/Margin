@@ -722,14 +722,19 @@ export function createTabs({ editor, autosave, api, getStorage, elements, onActi
       return tab ? languageOf(tab) : null;
     },
 
-    /** Applies server metadata and reloads clean tabs that changed elsewhere. */
-    async refresh() {
+    /**
+     * Applies server metadata and reloads clean tabs that changed elsewhere.
+     * @param {{ onList?: (list: import('./api.js').DocumentMeta[]) => void }} [options]
+     *   onList gets the list as soon as it is read (audit C2).
+     */
+    async refresh({ onList } = {}) {
       // Only tabs that were open before the list was read count. A tab opened
       // during the read (New, a drop) is not in the list yet, but not gone.
       const known = new Set(tabs.map((tab) => tab.id));
       const started = metaClock;
       const { status, data } = await api.listDocuments();
       if (status !== 200) return;
+      onList?.(data);
       const plan = planRefresh(
         tabs
           .filter((tab) => known.has(tab.id))

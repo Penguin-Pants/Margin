@@ -610,9 +610,7 @@ setupShortcuts({
 $('new-doc').title = `New document (${modName()}+N in the installed app, Alt+N)`;
 $('find').title = `Find (${modName()}+F) and replace (${modName()}+H)`;
 $('save').title = `Save now (${modName()}+S)`;
-// TD-15: clean tabs and the open document list refresh on window focus.
-window.addEventListener('focus', () => {
-  tabs.refresh();
-  doclist.refresh();
-});
+// TD-15: clean tabs and the open document list refresh on window focus,
+// from one list read (audit C2).
+window.addEventListener('focus', () => tabs.refresh({ onList: (list) => doclist.refresh(list) }));
 tabs.boot();

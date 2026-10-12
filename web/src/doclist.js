@@ -77,10 +77,19 @@ export function createDocList({ api, tabs, autosave, exclusive, root, button, pa
     return item;
   }
 
-  async function refresh() {
+  /**
+   * Reloads the rows when the dropdown is open.
+   * @param {import('./api.js').DocumentMeta[]} [given] A list that the
+   *   caller just read, so a window focus reads it once (audit C2).
+   */
+  async function refresh(given) {
     if (!dropdown.isOpen()) return;
-    const { status, data } = await api.listDocuments();
-    if (status !== 200) return;
+    let data = given;
+    if (!data) {
+      const result = await api.listDocuments();
+      if (result.status !== 200) return;
+      data = result.data;
+    }
     // A re-render drops the focus, so it goes back to the same button of the
     // same row when that row is still there.
     const focused = /** @type {HTMLElement | null} */ (list.contains(document.activeElement) ? document.activeElement : null);
@@ -168,7 +177,6 @@ export function createDocList({ api, tabs, autosave, exclusive, root, button, pa
   return {
     /** Opens the dropdown and reloads the list. */
     show: () => dropdown.open(),
-    /** Reloads the list when the dropdown is open. */
     refresh,
     /**
      * Closes the dropdown and drops its rows, when the workspace changes
