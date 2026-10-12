@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { afterEach, beforeEach, test } from 'node:test';
 import { LANGUAGE_IDS } from '../../shared/contract.js';
-import { renamedName } from '../src/documents/repo.js';
+import { renamedName } from '../../shared/contract.js';
 import { createTestApp, login, ORIGIN } from './helpers.js';
 
 const MISSING_ID = '00000000-0000-4000-8000-000000000000';

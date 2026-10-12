@@ -2,7 +2,7 @@
 // localStorage (v3 TD-31). Content loads on first activation. Clean tabs
 // refresh from the server on window focus and on tab activation (TD-15).
 
-import { baseName, NAME_MAX_LENGTH, NEW_NAME } from '../../shared/contract.js';
+import { baseName, NAME_MAX_LENGTH, NEW_NAME, renamedName } from '../../shared/contract.js';
 import { choose } from './dialogs.js';
 import { languageSupport, resolveLanguage } from './languages.js';
 import { modName } from './shortcuts.js';
@@ -44,12 +44,13 @@ export function writeOpenTabs(getStorage, state, key) {
 }
 
 /**
- * True when a typed name is the stored one after trimming, so a rename
- * sends nothing (v4 REN-6). The server would append `.md` to it.
+ * True when a typed name is the stored one after trimming, or when the
+ * server would store it as the stored one (`notes` for `notes.md`), so a
+ * rename sends nothing (v4 REN-6, audit C3).
  * @param {string} typed
  * @param {string} current
  */
-export const isUnchangedName = (typed, current) => typed.trim() === current;
+export const isUnchangedName = (typed, current) => typed.trim() === current || renamedName(typed) === current;
 
 /**
  * Decides what a refresh does (TD-15). Only clean tabs change: a dirty tab

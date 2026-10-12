@@ -51,3 +51,30 @@ export function baseName(name) {
   const extension = extensionOf(name);
   return (extension ? name.slice(0, -extension.length - 1) : name) || name;
 }
+
+const CONTROL_CHARS = /[\u0000-\u001f\u007f-\u009f]/;
+
+/**
+ * Returns the trimmed name, or null when it breaks the name rule:
+ * 1 to NAME_MAX_LENGTH characters after trimming and no control characters.
+ * @param {unknown} value
+ */
+export function normalizeName(value) {
+  if (typeof value !== 'string') return null;
+  const name = value.trim();
+  const length = [...name].length;
+  return length >= 1 && length <= NAME_MAX_LENGTH && !CONTROL_CHARS.test(name) ? name : null;
+}
+
+/**
+ * The stored name of a rename (v4 REN-5, REN-7), or null when it breaks the
+ * name rule: trimmed, trailing dots removed, then `.md` appended when it has
+ * no extension (EXT-1). The limit counts the appended `.md`.
+ * @param {unknown} value
+ */
+export function renamedName(value) {
+  if (typeof value !== 'string') return null;
+  const name = value.trim().replace(/[.\s]+$/u, '');
+  if (name === '') return null;
+  return normalizeName(extensionOf(name) ? name : `${name}.md`);
+}

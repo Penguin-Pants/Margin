@@ -1,9 +1,9 @@
 // Document API (BUILD_PLAN.md section 2.7). Content travels as text/plain
 // with an exact byte limit (TD-7). Every route acts on the workspace that its
 // `workspace` query value names, Personal by default (v3 TD-23).
-import { CONTENT_LIMIT_BYTES, LANGUAGE_IDS, WORKSPACES } from '../../../shared/contract.js';
+import { CONTENT_LIMIT_BYTES, LANGUAGE_IDS, normalizeName, renamedName, WORKSPACES } from '../../../shared/contract.js';
 import { parseWorkspace } from '../workspaces.js';
-import { createDocument, deleteDocument, getDocument, listDocuments, normalizeName, renamedName, saveContent, updateMeta } from './repo.js';
+import { createDocument, deleteDocument, getDocument, listDocuments, saveContent, updateMeta } from './repo.js';
 
 /**
  * @param {import('fastify').FastifyInstance} app

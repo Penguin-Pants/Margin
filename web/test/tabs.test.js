@@ -84,3 +84,11 @@ test('a typed name that only adds spaces around the stored name is unchanged, an
   assert.equal(isUnchangedName('new 01', 'New 01'), false);
   assert.equal(isUnchangedName('todo', 'New 01'), false);
 });
+
+test('a typed name that the server would store as the current name is unchanged (audit C3)', () => {
+  assert.equal(isUnchangedName('notes', 'notes.md'), true);
+  assert.equal(isUnchangedName(' notes. ', 'notes.md'), true);
+  assert.equal(isUnchangedName('Notes', 'notes.md'), false);
+  assert.equal(isUnchangedName('notes.txt', 'notes.md'), false);
+  assert.equal(isUnchangedName('', 'notes.md'), false);
+});
