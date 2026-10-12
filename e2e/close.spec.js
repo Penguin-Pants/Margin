@@ -83,3 +83,18 @@ test('when the Keep save fails, the tab stays open with status error', async ({ 
   await expect(page.getByRole('tab')).toHaveCount(1);
   await expect(editor(page)).toHaveText('cannot save');
 });
+
+test('an empty New tab whose document got text on another device asks before it deletes (audit C1)', async ({ page, api }) => {
+  await login(page);
+  await newDocument(page);
+  const [id] = await documentIds(api);
+  const saved = await api.put(`/api/documents/${id}/content`, {
+    data: 'typed on another device',
+    headers: { 'Content-Type': 'text/plain', 'If-Match': '1' },
+  });
+  expect(saved.status()).toBe(200);
+  await closeButton(page, 'New 01').click();
+  await expect(closeDialog(page)).toBeVisible();
+  await expect(editor(page)).toHaveText('typed on another device');
+  expect((await api.get(`/api/documents/${id}`)).status()).toBe(200);
+});

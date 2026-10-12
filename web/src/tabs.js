@@ -409,11 +409,20 @@ export function createTabs({ editor, autosave, api, getStorage, elements, onActi
     render();
   }
 
-  // The tab is already closed, so no pending save can reach the document.
-  async function deleteOnServer(id) {
-    const { status, stale } = await api.deleteDocument(id);
-    if (stale) return;
-    if (status !== 204 && status !== 404) showMessage('Delete failed. The document is still in the document list.');
+  /**
+   * The tab is already closed, so no pending save can reach the document.
+   * With `version`, a document saved elsewhere since stays (audit C1).
+   * @param {string} id
+   * @param {number} [version]
+   * @returns {Promise<'deleted' | 'changed' | 'failed' | 'stale'>}
+   */
+  async function deleteOnServer(id, version) {
+    const { status, stale } = await api.deleteDocument(id, undefined, version);
+    if (stale) return 'stale';
+    if (status === 204 || status === 404) return 'deleted';
+    if (status === 412) return 'changed';
+    showMessage('Delete failed. The document is still in the document list.');
+    return 'failed';
   }
 
   /** Replaces a tab's state with server content. Resets its autosave. */
@@ -564,6 +573,7 @@ export function createTabs({ editor, autosave, api, getStorage, elements, onActi
       const tab = find(id);
       if (!tab) return false;
       let content = controller.content(id);
+      let version = autosave.version(id);
       if (content === null) {
         const { status, data, stale } = await api.getDocument(id);
         if (stale) return false;
@@ -576,12 +586,23 @@ export function createTabs({ editor, autosave, api, getStorage, elements, onActi
           return false;
         }
         content = data.content;
+        version = data.version;
       }
 
       if (content === '' && NEW_NAME.test(tab.name)) {
+        // Unsaved text saves first, so the version below is the server's.
+        if (!isClean(tab)) {
+          if (!(await autosave.flush(id))) return false;
+          version = autosave.version(id);
+        }
+        // The delete names the version this tab saw. Text that another
+        // device saved since gets 412: the tab opens again with that text,
+        // and the close asks (audit C1).
         removeTab(id);
-        await deleteOnServer(id);
-        return true;
+        const result = await deleteOnServer(id, version);
+        if (result !== 'changed') return true;
+        await controller.open(id, tab.name);
+        return find(id) ? controller.close(id) : true;
       }
 
       const answer = await choose({

@@ -132,11 +132,21 @@ export function updateMeta(db, workspace, id, { name, language, workspace: targe
 }
 
 /**
+ * Deletes a document. With expectedVersion, only while the stored version
+ * still equals it, so text saved on another device stays (audit C1).
  * @param {import('node:sqlite').DatabaseSync} db
  * @param {string} workspace
  * @param {string} id
- * @returns {boolean} false when the document does not exist in the workspace.
+ * @param {number} [expectedVersion]
+ * @returns {{ ok: true } | { ok: false, currentVersion: number | null }}
+ *   currentVersion is null when the document does not exist in the workspace.
  */
-export function deleteDocument(db, workspace, id) {
-  return db.prepare('DELETE FROM documents WHERE id = ? AND workspace = ?').run(id, workspace).changes === 1;
+export function deleteDocument(db, workspace, id, expectedVersion) {
+  const { changes } =
+    expectedVersion === undefined
+      ? db.prepare('DELETE FROM documents WHERE id = ? AND workspace = ?').run(id, workspace)
+      : db.prepare('DELETE FROM documents WHERE id = ? AND workspace = ? AND version = ?').run(id, workspace, expectedVersion);
+  if (changes === 1) return { ok: true };
+  const row = db.prepare('SELECT version FROM documents WHERE id = ? AND workspace = ?').get(id, workspace);
+  return { ok: false, currentVersion: row?.version ?? null };
 }

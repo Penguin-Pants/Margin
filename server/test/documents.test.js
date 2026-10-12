@@ -223,3 +223,44 @@ test('content round-trips control characters, NUL and astral characters', async 
   const res = await create(text);
   assert.equal((await get(res.json().id)).json().content, text);
 });
+
+// Audit C1: a delete that names the version it saw deletes nothing that
+// another device saved since.
+const remove = (id, headers = {}) =>
+  ctx.app.inject({ method: 'DELETE', url: `/api/documents/${id}`, headers: { cookie, origin: ORIGIN, ...headers } });
+const save = (id, version, content) =>
+  ctx.app.inject({
+    method: 'PUT',
+    url: `/api/documents/${id}/content`,
+    headers: { cookie, origin: ORIGIN, 'content-type': 'text/plain', 'if-match': String(version) },
+    payload: content,
+  });
+
+test('a delete with the current version in If-Match deletes the document (audit C1)', async () => {
+  const doc = (await create()).json();
+  assert.equal((await remove(doc.id, { 'if-match': '1' })).statusCode, 204);
+  assert.equal((await get(doc.id)).statusCode, 404);
+});
+
+test('a delete with an old version in If-Match returns 412 and keeps the document (audit C1)', async () => {
+  const doc = (await create()).json();
+  assert.equal((await save(doc.id, 1, 'typed on another device')).statusCode, 200);
+  const res = await remove(doc.id, { 'if-match': '1' });
+  assert.equal(res.statusCode, 412);
+  assert.deepEqual(res.json(), { error: 'version_conflict', currentVersion: 2 });
+  assert.equal((await get(doc.id)).json().content, 'typed on another device');
+});
+
+test('a delete with a malformed If-Match returns 428 and keeps the document (audit C1)', async () => {
+  const doc = (await create()).json();
+  assert.equal((await remove(doc.id, { 'if-match': '"1"' })).statusCode, 428);
+  assert.equal((await get(doc.id)).statusCode, 200);
+});
+
+test('a delete without If-Match deletes whatever the version, and an unknown id is 404 with or without it (audit C1)', async () => {
+  const doc = (await create()).json();
+  await save(doc.id, 1, 'more');
+  assert.equal((await remove(doc.id)).statusCode, 204);
+  assert.equal((await remove(doc.id)).statusCode, 404);
+  assert.equal((await remove(doc.id, { 'if-match': '1' })).statusCode, 404);
+});
