@@ -6,7 +6,7 @@ A private, single-owner text editor in the browser, inspired by Notepad++. Docum
 
 Features: tabs with rename in place, autosave with Save and Save all buttons, plain text editing with line numbers, syntax highlighting for 11 languages, literal find and replace in the current tab, a document list, a keep-or-delete prompt when you close a tab, a warning when another device changed the same document, dark and light themes, a Classic or Dr. Claw brand theme, and install as a desktop app in Chrome or Edge.
 
-For Markdown: a Visual mode (live preview) with one Visual/Raw toggle, a formatting toolbar, an outline of the headings, word and character counts, Mermaid diagrams, export to `.md`, `.txt`, `.html` and PDF, and drag and drop to open `.md`, `.txt` and `.html` files.
+For Markdown: a Visual mode (live preview) with one Visual/Raw toggle, a formatting toolbar, an outline of the headings, word and character counts, Mermaid diagrams, export to `.md`, `.txt`, `.html` and PDF, and drag and drop to open text, Markdown, HTML, JSON, CSS, JavaScript, TypeScript, Python and YAML files.
 
 ## Local setup
 
@@ -106,7 +106,7 @@ In a Markdown tab, Ctrl+B (Cmd+B) makes text bold, Ctrl+I (Cmd+I) italic and Ctr
 ## Export and drag and drop
 
 - **Export menu:** exports the active tab with its current text, also unsaved edits. Markdown offers `.md`, `.txt` (Markdown marks removed), `.html` (one self-contained page, light theme, no scripts) and PDF (opens the print dialog; choose Save as PDF). Other documents offer their original source, when the name has an extension other than `.txt`, and `.txt`.
-- **Drop files:** drop `.md`, `.markdown`, `.txt`, `.html` or `.htm` files on the page. Each becomes a new document with the file name, and opens in a tab. A taken name gets ` (2)`, ` (3)` and so on. Files over 1 MB, other types and text that is not UTF-8 are not opened, and a message names them. While a dialog is open, dropped files are not opened.
+- **Drop files:** drop `.md`, `.markdown`, `.txt`, `.html`, `.htm`, `.json`, `.css`, `.js`, `.mjs`, `.cjs`, `.ts`, `.mts`, `.cts`, `.py`, `.yaml` or `.yml` files on the page. Each becomes a new document with the file name, and opens in a tab with the highlighting of its extension. A taken name gets ` (2)`, ` (3)` and so on before the extension. A name that is only an extension gets `(2).yml`, `(3).yml` and so on. Files over 1 MB, other types and text that is not UTF-8 are not opened, and a message names them. While a dialog is open, dropped files are not opened.
 
 ## Workspaces
 

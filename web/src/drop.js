@@ -1,25 +1,27 @@
-// Open files by dropping them on the page (DRP-1 to DRP-6, EDGE-10 to
-// EDGE-14). Each accepted file becomes a new server document named as the
-// file, and opens in a new tab. A drag of text inside the editor is not a
-// file drag, so the editor keeps its own behavior (DRP-5).
+// Open files by dropping them on the page (DRP-1 to DRP-11, EDGE-10 to
+// EDGE-14, EDGE-52 to EDGE-55). Each accepted file becomes a new server
+// document named as the file, and opens in a new tab. A drag of text inside
+// the editor is not a file drag, so the editor keeps its own behavior (DRP-5).
 import { baseName, CONTENT_LIMIT_BYTES, extensionOf } from '../../shared/contract.js';
 
-const ACCEPTED = new Set(['md', 'markdown', 'txt', 'html', 'htm']);
+// Text, Markdown and HTML (v2 DRP-1, DRP-3), then code and data files (v5 D80).
+const ACCEPTED = new Set(['md', 'markdown', 'txt', 'html', 'htm', 'json', 'css', 'js', 'mjs', 'cjs', 'ts', 'mts', 'cts', 'py', 'yaml', 'yml']);
 const isAccepted = (name) => ACCEPTED.has(extensionOf(name).toLowerCase());
 
 /**
  * The name, or the first free "name (n).ext" when another document has it
- * (DRP-2). The extension follows v4 EXT-1. `taken` holds the names in lower
- * case.
+ * (DRP-2). The extension follows v4 EXT-1. A name that is only an extension,
+ * like `.yml`, gets "(n).yml", so the copy keeps its extension (DRP-11).
+ * `taken` holds the names in lower case.
  * @param {string} name
  * @param {Set<string>} taken
  */
 export function uniqueName(name, taken) {
   if (!taken.has(name.toLowerCase())) return name;
-  const base = baseName(name);
-  const extension = base === name ? '' : `.${extensionOf(name)}`;
+  const extension = extensionOf(name) ? `.${extensionOf(name)}` : '';
+  const base = extension === name ? '' : `${baseName(name)} `;
   for (let n = 2; ; n += 1) {
-    const candidate = `${base} (${n})${extension}`;
+    const candidate = `${base}(${n})${extension}`;
     if (!taken.has(candidate.toLowerCase())) return candidate;
   }
 }
@@ -31,7 +33,7 @@ export function uniqueName(name, taken) {
  * @returns {{ text: string } | { error: string }}
  */
 export function droppedText({ name, bytes }) {
-  if (!isAccepted(name)) return { error: 'only .md, .txt and .html files' };
+  if (!isAccepted(name)) return { error: 'this file type cannot be opened' };
   if (bytes.length > CONTENT_LIMIT_BYTES) return { error: 'larger than 1 MB' };
   try {
     // The decoder drops a byte order mark, and fatal rejects invalid UTF-8.

@@ -231,6 +231,7 @@ Coding agents record deviations from the plan here.
 | 2026-10-11 | M22 to M24 | Changed v1 to v3 tests outside the section 10 rows: the `extensionOf` test moved from `web/test/languages.test.js` to `web/test/contract.test.js` with all its cases. `e2e/layout.spec.js` (narrow window) also lists Save and Save all. | The function moved to `shared/contract.js` (EXT-2). The narrow-window list gains entries and loses none. | Owner (chat, 2026-10-11) |
 | 2026-10-11 | M22 | REN-6 (an unchanged name sends nothing) first had e2e tests only. The owner asked for a unit test: the check is now `isUnchangedName` in `web/src/tabs.js`, unit-tested in `web/test/tabs.test.js` (it failed first on a stub). | The check is in the tab controller, which needs the DOM. The controller has e2e tests only, as since P3 (section 10, P3 row 5). | Owner (chat, 2026-10-11): add the unit test. Built. |
 | 2026-10-11 | M25 | A drag never activates a tab, and the click after a drop is stopped. | TAB-1 to TAB-3 do not say. Without the stop, a drop on the dragged tab activated it and a drop elsewhere did not (review row 2). | Pending (owner) |
+| 2026-10-15 | T41 | `docs/error-messages.csv` also gets new line numbers in the 5 other `web/src/drop.js` rows (rows 21, 22, 51, 53 and 54). T41 named row 52 only. | T41 adds 2 lines above them, so the old numbers pointed at the wrong lines. Only the location column changed. | Pending (owner) |
 
 ## 10. Phase review log
 
@@ -716,3 +717,31 @@ Two-pass review of each V4 phase diff (`REQUIREMENTS_V4.md` section 9). Same met
 - Owner review (2026-10-11): 15 deviations approved in chat. REN-6 unit test added: `npm test` 441 of 441.
 - M25 (PR #17): `npm test` 441 of 441. Chromium e2e 226 of 226 with 7 tests in `e2e/tab-order.spec.js`. The 2 first drag tests failed first on an assertion; the review tests for rows 1 to 4 and 6 failed first.
 - PR #16 Codex fixes (PR #17): `npm test` 441 of 441, Chromium e2e 233 of 233. The 7 tests in `e2e/rename-races.spec.js` failed first on an assertion (the Codex 2 test after its held reply was made to carry the old list).
+
+---
+
+## 17. V5 review log
+
+Two-pass review of the M26 diff (`BUILD_PLAN_V5.md`). Same method and verdicts as section 10. `AGENTS.md` defines no finding classification, so section 1 applies (section 9, row of 2026-10-09). Pass 1 ran in a separate review agent; pass 2 checked each finding in the files and with a test.
+
+| Phase | # | Finding | Verdict | Action |
+|-------|---|---------|---------|--------|
+| M26 | 1 | `docs/error-messages.csv` lost its CRLF line endings, so the diff touched all 57 lines. | Confirmed | Fixed: CRLF restored. `git diff -w` and `git diff` now show the same 6 rows. |
+| M26 | 2 | Row 52 used a new status value, "CHANGED in v5 T41 (DRP-9)", and quoted a field with no comma. | Confirmed | Fixed: status `CHANGED`, no quotes. The task name moved to the verification column. |
+| M26 | 3 | The DRP-10 test passed with the overlay hidden, because `toHaveText` does not check visibility and the text is static. | Confirmed | Fixed: the test also asserts `toBeVisible()`. |
+| M26 | 4 | The DRP-7 unit test checked upper case for 2 names only. T41 unit test 1 asks for each D80 extension. | Confirmed | Fixed: each name runs in lower and upper case. |
+| M26 | 5 | No test asserted that a dropped file keeps the stored language Auto (DRP-8), and the `.yml` tab was not checked for YAML. | Confirmed | Fixed: the e2e test checks `language` null for the 4 dropped documents and `yaml` on all 3 YAML tabs. With `createDocument(text, name, 'yaml')` the test failed on an assertion. |
+| M26 | 6 | No unit case showed that the extension-only rule leaves other names alone. | Confirmed | Fixed: `.env.yml` gives `.env (2).yml`, `todo.` gives `todo. (2)`. |
+| M26 | 7 | README said a taken name gets " (2)" before the extension, with a space, then gave `(2).yml` with no space. | Confirmed | Fixed: two sentences, one per rule. |
+| M26 | 8 | `BUILD_PLAN_V5.md` section 7 and this section were not updated yet. | Rejected | Done in the same commit, after the review (plan rules 5 and 6). |
+
+### V5 validation environment
+
+- Node.js 24.22.0 from nodejs.org (checksum verified), outside the repo. The container default is Node 22.
+- Chromium e2e only, on the preinstalled Chromium build 1194 through a temporary config with `executablePath`, as in v3 and v4. Firefox and WebKit are not installed, so the `@smoke` runs stay with CI and the owner.
+- Baseline on 2c3873c: `npm test` 463 of 463. Chromium e2e on `e2e/export-drop.spec.js` 13 of 13.
+- Tests first: the 4 new and changed unit tests failed on an assertion (`.yml (2)`, the old reject reason, a rejected `.json`). The 4 new and changed e2e tests failed on an assertion (the old reject text, missing tabs, the old overlay text).
+- M26 after the review fixes: `npm test` 465 of 465. Chromium e2e 257 of 257. The perf spec was not run: T41 changes no editor or parser code.
+- Acceptance: DRP-7 to DRP-11 each have a passing unit or e2e test (`web/test/drop.test.js`, `e2e/export-drop.spec.js`). EDGE-52 holds by reading: `isAccepted` reads the name only (`web/src/drop.js:9`). EDGE-53 holds: drop does not parse the text.
+- Owner checks: the `@smoke` specs in Firefox and WebKit run in CI.
+
