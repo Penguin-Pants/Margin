@@ -129,7 +129,7 @@ test('a status message that wraps to its own row stays at the right end (STB-2)'
   await expect(page.locator('#counts')).not.toBeEmpty();
   await drop(page, [{ name: 'report.pdf', text: 'x' }]);
   const message = page.locator('#status-message');
-  await expect(message).toHaveText('Not opened: report.pdf (only .md, .txt and .html files).');
+  await expect(message).toHaveText('Not opened: report.pdf (this file type cannot be opened).');
   const bar = await page.locator('.statusbar').boundingBox();
   const box = await message.boundingBox();
   const language = await page.getByRole('combobox', { name: 'Language' }).boundingBox();
@@ -151,7 +151,7 @@ test('dropped files open as new documents in drop order, with free names, and re
     .toEqual(['notes.md', 'notes (2).md', 'README.MD', 'page.html']);
   await expect(page.getByRole('tab', { name: 'page.html' })).toHaveAttribute('aria-selected', 'true');
   await expect(page.locator('.cm-content')).toHaveAttribute('data-language', 'html');
-  await expect(page.locator('#status-message')).toHaveText('Not opened: report.pdf (only .md, .txt and .html files).');
+  await expect(page.locator('#status-message')).toHaveText('Not opened: report.pdf (this file type cannot be opened).');
   // The message shows at the right end of the status bar, after the language list (STB-2).
   const message = await page.locator('#status-message').boundingBox();
   const language = await page.getByRole('combobox', { name: 'Language' }).boundingBox();
@@ -160,6 +160,41 @@ test('dropped files open as new documents in drop order, with free names, and re
   expect(docs).toEqual(['README.MD', 'notes (2).md', 'notes.md', 'page.html']);
   const page2 = (await (await api.get('/api/documents')).json()).find((doc) => doc.name === 'page.html');
   expect((await (await api.get(`/api/documents/${page2.id}`)).json()).content).toBe('<p>a</p>\n<p>b</p>');
+});
+
+test('code and data files open with the language of their extension, and a taken extension-only name keeps its extension (DRP-7, DRP-8, DRP-11)', async ({ page, api }) => {
+  await openDocs(page, api, [['notes.md', 'old']]);
+  await drop(page, [
+    { name: 'ci.yml', text: 'a: 1' },
+    { name: '.yml', text: 'b: 1' },
+    { name: '.yml', text: 'c: 1' },
+    { name: 'main.ts', text: 'const x: number = 1;' },
+  ]);
+  await expect
+    .poll(() => page.getByRole('tab').evaluateAll((tabs) => tabs.map((tab) => tab.getAttribute('aria-label'))))
+    .toEqual(['notes.md', 'ci.yml', '.yml', '(2).yml', 'main.ts']);
+  await expect(page.locator('.cm-content')).toHaveAttribute('data-language', 'typescript');
+  for (const name of ['ci.yml', '.yml', '(2).yml']) {
+    await page.getByRole('tab', { name, exact: true }).click();
+    await expect(page.locator('.cm-content')).toHaveAttribute('data-language', 'yaml');
+  }
+  await expect(page.locator('#status-message')).toBeEmpty();
+  const docs = (await (await api.get('/api/documents')).json()).filter((doc) => doc.name !== 'notes.md');
+  expect(docs.map((doc) => doc.name).sort()).toEqual(['(2).yml', '.yml', 'ci.yml', 'main.ts']);
+  // The stored language stays Auto, so the extension decides (DRP-8).
+  expect(docs.map((doc) => doc.language)).toEqual([null, null, null, null]);
+});
+
+test('the drop overlay names no file types (DRP-10)', async ({ page, api }) => {
+  await openDocs(page, api, [['a.md', 'keep']]);
+  const transfer = await page.evaluateHandle(() => {
+    const data = new DataTransfer();
+    data.items.add(new File(['x'], 'a.json'));
+    return data;
+  });
+  await page.dispatchEvent('body', 'dragenter', { dataTransfer: transfer });
+  await expect(page.locator('#drop-overlay')).toBeVisible();
+  await expect(page.locator('#drop-overlay')).toHaveText('Drop files to open them');
 });
 
 test('a drag of text shows no overlay, and a file drop never inserts into the editor (DRP-5)', async ({ page, api }) => {

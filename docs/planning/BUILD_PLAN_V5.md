@@ -1,6 +1,6 @@
 # Build Plan V5: Drop More File Types
 
-**Status:** M26 (T41) is Planned. No open plan decisions.
+**Status:** M26 (T41) is Done. No open plan decisions. One deviation waits for the owner (`PLAN_REVIEW.md` section 9, row of 2026-10-15).
 **Date:** 2026-10-15
 **Inputs:** `REQUIREMENTS_V2.md` section 3.7 (DRP-1 to DRP-6), `REQUIREMENTS_V4.md` (EXT-1), `BUILD_PLAN_V3.md` (TD-41, TD-42), `AGENTS.md`
 **Codebase:** v1 to v4 are built. Line references in this file are for `main` at 2b5e3c0.
@@ -124,7 +124,7 @@ All other drop behavior stays unchanged: names and clash suffixes (DRP-2, except
 
 | Task | Name | Milestone | Size | Depends on | Status | Evidence |
 |------|------|-----------|------|------------|--------|----------|
-| T41 | Accept the D80 extensions | M26 | S | none | Planned | |
+| T41 | Accept the D80 extensions | M26 | S | none | Done | This branch. `npm test` 465 of 465, Chromium e2e 257 of 257. Review: `PLAN_REVIEW.md` section 17. |
 
 ---
 
