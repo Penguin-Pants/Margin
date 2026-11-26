@@ -1,4 +1,4 @@
-# Interview Copilot
+# Margin - a simple web-basd markdown editor for notes
 
 Project tier: T4
 Conventions version: 1.0
